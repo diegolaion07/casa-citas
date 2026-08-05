@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Casa &amp; Citas</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  body { -webkit-tap-highlight-color: transparent; }
+  ::-webkit-scrollbar { height: 6px; width: 6px; }
+  ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 3px; }
+</style>
+</head>
+<body class="bg-stone-50 text-stone-900 antialiased">
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useCallback } = React;
+
+/* ══════════════ CONFIGURACIÓN ══════════════
+   1. Pega aquí la URL del Web App de Apps Script
+   2. Usa el MISMO token que pusiste en Codigo.gs
+   3. Cambia los PIN                                */
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyZul-rE1Evzlh6XufFGNwQcKr-qwYn5kgeb1y7BVcdviAK_lM6lJYsYtJ0cQZOCuyE/exec';
+const TOKEN       = 'casa-gd-2026-x7k9m2p';
+const PINS        = { '070990': 'Diego', '135790': 'Gabriela' };   // ← cambia estos dos números
+/* ═══════════════════════════════════════════ */
+
+const CATEGORIAS = ['Supermercado', 'Arriendo/Gastos comunes', 'Servicios', 'Salidas', 'Transporte', 'Salud', 'Otros'];
+const DIAS  = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const HORAS = Array.from({ length: 15 }, (_, i) => i + 8);   // 08:00 → 22:00
+const COLOR = { Diego: 'bg-sky-500', Gabriela: 'bg-rose-400' };
+
+// ─────────── utilidades ───────────
+const clp = n => '$' + Number(n || 0).toLocaleString('es-CL', { maximumFractionDigits: 0 });
+const hh  = h => String(h).padStart(2, '0') + ':00';
+
+const hoyISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const mesDe = f => String(f).slice(0, 7);
+
+const mesAnterior = m => {
+  const [y, mm] = m.split('-').map(Number);
+  const d = new Date(y, mm - 2, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
+const lunesDe = base => {
+  const d = new Date(base);
+  const off = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - off);
+  d.setHours(12, 0, 0, 0);
+  return d;
+};
+
+const nombreLargo = f =>
+  new Date(f + 'T12:00:00').toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+
+async function api(action, payload = {}) {
+  const res = await fetch(WEB_APP_URL, {
+    method: 'POST',
+    // text/plain a propósito: evita el preflight CORS que Apps Script no contesta
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action, token: TOKEN, ...payload })
+  });
+  const j = await res.json();
+  if (!j.ok) throw new Error(j.error || 'Error del servidor');
+  return j.data;
+}
+
+// ─────────── componentes base ───────────
+const Card = ({ children, className = '' }) =>
+  <div className={`bg-white rounded-2xl border border-stone-200/80 ${className}`}>{children}</div>;
+
+const Btn = ({ children, onClick, variant = 'primary', className = '', ...p }) => {
+  const v = {
+    primary: 'bg-stone-900 text-white hover:bg-stone-700',
+    ghost:   'bg-stone-100 text-stone-700 hover:bg-stone-200',
+    danger:  'text-stone-400 hover:text-red-600'
+  }[variant];
+  return <button onClick={onClick} className={`rounded-xl px-4 py-2.5 text-sm font-medium transition ${v} ${className}`} {...p}>{children}</button>;
+};
+
+const Input = props =>
+  <input {...props} className={`w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-stone-400 ${props.className || ''}`} />;
+
+const Select = ({ children, ...p }) =>
+  <select {...p} className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-stone-400">{children}</select>;
+
+// ═════════════ LOGIN ═════════════
+function Login({ onEntrar }) {
+  const [pin, setPin] = useState('');
+  const [err, setErr] = useState(false);
+
+  const probar = v => {
+    setPin(v);
+    setErr(false);
+    if (v.length === 4) {
+      if (PINS[v]) onEntrar(PINS[v]);
+      else { setErr(true); setTimeout(() => setPin(''), 400); }
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center px-6">
+      <div className="w-full max-w-xs text-center">
+        <div className="text-4xl mb-3">🏠</div>
+        <h1 className="text-xl font-semibold tracking-tight">Casa &amp; Citas</h1>
+        <p className="text-sm text-stone-500 mt-1 mb-7">Ingresa tu PIN</p>
+
+        <input
+          value={pin} onChange={e => probar(e.target.value.replace(/\D/g, '').slice(0, 4))}
+          type="tel" inputMode="numeric" autoFocus placeholder="••••"
+          className={`w-full text-center text-3xl tracking-[0.5em] rounded-2xl border-2 bg-white py-4 outline-none transition
+            ${err ? 'border-red-400 text-red-500' : 'border-stone-200 focus:border-stone-900'}`}
+        />
+        {err && <p className="text-sm text-red-500 mt-3">PIN incorrecto</p>}
+      </div>
+    </div>
+  );
+}
+
+// ═════════════ GASTOS ═════════════
+function Gastos({ data, recargar, yo }) {
+  const [mes, setMes]   = useState(hoyISO().slice(0, 7));
+  const [form, setForm] = useState({ fecha: hoyISO(), categoria: CATEGORIAS[0], descripcion: '', monto: '', pagado_por: yo });
+  const [abierto, setAbierto] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const delMes  = useMemo(() => data.gastos.filter(g => mesDe(g.fecha) === mes), [data.gastos, mes]);
+  const delPrev = useMemo(() => data.gastos.filter(g => mesDe(g.fecha) === mesAnterior(mes)), [data.gastos, mes]);
+
+  const total  = delMes.reduce((s, g) => s + Number(g.monto || 0), 0);
+  const prev   = delPrev.reduce((s, g) => s + Number(g.monto || 0), 0);
+  const delta  = prev ? ((total - prev) / prev) * 100 : 0;
+
+  const porCat = useMemo(() => {
+    const m = {};
+    delMes.forEach(g => { m[g.categoria] = (m[g.categoria] || 0) + Number(g.monto || 0); });
+    return Object.entries(m).sort((a, b) => b[1] - a[1]);
+  }, [delMes]);
+
+  const presupuesto = c => {
+    const p = data.presupuestos.find(x => x.categoria === c);
+    return p ? Number(p.monto_mensual) : 0;
+  };
+
+  const porPersona = useMemo(() => {
+    const m = {};
+    delMes.forEach(g => { m[g.pagado_por] = (m[g.pagado_por] || 0) + Number(g.monto || 0); });
+    return m;
+  }, [delMes]);
+
+  const guardar = async e => {
+    e.preventDefault();
+    if (!form.monto || !form.descripcion) return;
+    setBusy(true);
+    try {
+      recargar(await api('addGasto', { gasto: form }));
+      setForm({ ...form, descripcion: '', monto: '' });
+      setAbierto(false);
+    } catch (err) { alert(err.message); }
+    setBusy(false);
+  };
+
+  const meses = useMemo(() => {
+    const s = new Set(data.gastos.map(g => mesDe(g.fecha)));
+    s.add(hoyISO().slice(0, 7));
+    return [...s].filter(Boolean).sort().reverse();
+  }, [data.gastos]);
+
+  const max = Math.max(...porCat.map(c => c[1]), 1);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Select value={mes} onChange={e => setMes(e.target.value)}>
+          {meses.map(m => (
+            <option key={m} value={m}>
+              {new Date(m + '-02').toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })}
+            </option>
+          ))}
+        </Select>
+        <Btn onClick={() => setAbierto(!abierto)} className="shrink-0">{abierto ? 'Cerrar' : '+ Gasto'}</Btn>
+      </div>
+
+      {abierto && (
+        <Card className="p-4">
+          <form onSubmit={guardar} className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <Input type="date" value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} />
+              <Input type="number" placeholder="Monto" value={form.monto} onChange={e => setForm({ ...form, monto: e.target.value })} />
+            </div>
+            <Input placeholder="Descripción" value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} />
+            <div className="grid grid-cols-2 gap-3">
+              <Select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })}>
+                {CATEGORIAS.map(c => <option key={c}>{c}</option>)}
+              </Select>
+              <Select value={form.pagado_por} onChange={e => setForm({ ...form, pagado_por: e.target.value })}>
+                <option>Diego</option><option>Gabriela</option>
+              </Select>
+            </div>
+            <Btn className="w-full" disabled={busy}>{busy ? 'Guardando…' : 'Guardar'}</Btn>
+          </form>
+        </Card>
+      )}
+
+      <Card className="p-5">
+        <p className="text-xs uppercase tracking-wide text-stone-400">Total del mes</p>
+        <p className="text-3xl font-semibold tracking-tight mt-1">{clp(total)}</p>
+        {prev > 0 && (
+          <p className={`text-sm mt-1.5 ${delta > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+            {delta > 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(0)}% vs mes anterior ({clp(prev)})
+          </p>
+        )}
+        {Object.keys(porPersona).length > 1 && (
+          <div className="flex gap-4 mt-4 pt-4 border-t border-stone-100 text-sm">
+            {Object.entries(porPersona).map(([p, v]) => (
+              <div key={p}>
+                <span className={`inline-block w-2 h-2 rounded-full mr-1.5 ${COLOR[p] || 'bg-stone-400'}`}></span>
+                <span className="text-stone-500">{p}</span> <span className="font-medium">{clp(v)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <Card className="p-5">
+        <p className="text-xs uppercase tracking-wide text-stone-400 mb-4">Por categoría</p>
+        {porCat.length === 0 && <p className="text-sm text-stone-400">Sin gastos este mes.</p>}
+        <div className="space-y-3.5">
+          {porCat.map(([cat, monto]) => {
+            const pres = presupuesto(cat);
+            const excede = pres > 0 && monto > pres;
+            return (
+              <div key={cat}>
+                <div className="flex justify-between text-sm mb-1.5">
+                  <span className={excede ? 'text-red-600 font-medium' : 'text-stone-700'}>
+                    {cat} {excede && '⚠'}
+                  </span>
+                  <span className="tabular-nums text-stone-600">
+                    {clp(monto)}{pres > 0 && <span className="text-stone-300"> / {clp(pres)}</span>}
+                  </span>
+                </div>
+                <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${excede ? 'bg-red-500' : 'bg-stone-800'}`}
+                       style={{ width: `${(monto / max) * 100}%` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <p className="text-xs uppercase tracking-wide text-stone-400 mb-3">Movimientos</p>
+        <div className="divide-y divide-stone-100">
+          {[...delMes].sort((a, b) => String(b.fecha).localeCompare(String(a.fecha))).map(g => (
+            <div key={g.id} className="flex items-center gap-3 py-2.5 group">
+              <span className={`w-1.5 h-8 rounded-full shrink-0 ${COLOR[g.pagado_por] || 'bg-stone-300'}`}></span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm truncate">{g.descripcion}</p>
+                <p className="text-xs text-stone-400">{String(g.fecha).slice(8, 10)}/{String(g.fecha).slice(5, 7)} · {g.categoria}</p>
+              </div>
+              <span className="text-sm tabular-nums">{clp(g.monto)}</span>
+              <button onClick={async () => { if (confirm('¿Borrar?')) recargar(await api('delGasto', { id: g.id })); }}
+                      className="text-stone-300 hover:text-red-500 px-1 opacity-0 group-hover:opacity-100 transition">×</button>
+            </div>
+          ))}
+          {delMes.length === 0 && <p className="text-sm text-stone-400 py-2">Nada registrado todavía.</p>}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ═════════════ CALENDARIO ═════════════
+function Calendario({ data, recargar, yo }) {
+  const [lunes, setLunes] = useState(() => lunesDe(new Date()));
+  const [modo, setModo]   = useState('ocupado');   // 'ocupado' | 'plan'
+  const [plan, setPlan]   = useState(null);
+  const [rutinaAbierta, setRutinaAbierta] = useState(false);
+  const [busy, setBusy]   = useState(false);
+
+  const dias = useMemo(() =>
+    Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(lunes);
+      d.setDate(d.getDate() + i);
+      return d;
+    }), [lunes]);
+
+  const ocupado = useCallback((persona, fecha, hora) => {
+    const dow = new Date(fecha + 'T12:00:00').getDay();
+    const r = data.rutina.some(x =>
+      x.persona === persona && Number(x.dia_semana) === dow &&
+      hora >= Number(x.hora_inicio) && hora < Number(x.hora_fin));
+    const b = data.bloqueos.some(x =>
+      x.persona === persona && String(x.fecha) === fecha &&
+      hora >= Number(x.hora_inicio) && hora < Number(x.hora_fin));
+    return r || b;
+  }, [data.rutina, data.bloqueos]);
+
+  const click = async (fecha, hora) => {
+    if (modo === 'plan') {
+      if (ocupado('Diego', fecha, hora) || ocupado('Gabriela', fecha, hora)) return;
+      setPlan({ fecha, hora, titulo: '', descripcion: '' });
+      return;
+    }
+    setBusy(true);
+    try { recargar(await api('toggleBloqueo', { bloqueo: { persona: yo, fecha, hora_inicio: hora } })); }
+    catch (e) { alert(e.message); }
+    setBusy(false);
+  };
+
+  const enviarPlan = async e => {
+    e.preventDefault();
+    if (!plan.titulo) return;
+    setBusy(true);
+    try {
+      recargar(await api('crearPlan', { plan: { ...plan, propuesto_por: yo } }));
+      setPlan(null);
+    } catch (err) { alert(err.message); }
+    setBusy(false);
+  };
+
+  const libresEstaSemana = dias.reduce((acc, d) =>
+    acc + HORAS.filter(h => !ocupado('Diego', iso(d), h) && !ocupado('Gabriela', iso(d), h)).length, 0);
+
+  const pendientes = data.planes.filter(p => p.estado === 'pendiente');
+  const proximos   = data.planes.filter(p => p.estado === 'aceptado' && String(p.fecha) >= hoyISO());
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          <Btn variant="ghost" className="px-3" onClick={() => setLunes(d => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; })}>‹</Btn>
+          <Btn variant="ghost" className="px-3" onClick={() => setLunes(lunesDe(new Date()))}>Hoy</Btn>
+          <Btn variant="ghost" className="px-3" onClick={() => setLunes(d => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; })}>›</Btn>
+        </div>
+        <span className="text-sm text-stone-500">
+          {lunes.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })} – {dias[6].toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}
+        </span>
+      </div>
+
+      <div className="flex rounded-xl bg-stone-100 p-1 text-sm">
+        {[['ocupado', 'Marcar mi tiempo ocupado'], ['plan', 'Proponer un plan']].map(([k, label]) => (
+          <button key={k} onClick={() => setModo(k)}
+            className={`flex-1 rounded-lg py-2 font-medium transition ${modo === k ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <Card className="p-3 overflow-x-auto">
+        <div className="min-w-[560px]">
+          <div className="grid grid-cols-[38px_repeat(7,1fr)] gap-px mb-1">
+            <div />
+            {dias.map(d => (
+              <div key={d} className="text-center pb-1">
+                <p className="text-[10px] uppercase text-stone-400">{DIAS[d.getDay()]}</p>
+                <p className={`text-sm font-medium ${iso(d) === hoyISO() ? 'text-stone-900' : 'text-stone-500'}`}>{d.getDate()}</p>
+              </div>
+            ))}
+          </div>
+
+          {HORAS.map(h => (
+            <div key={h} className="grid grid-cols-[38px_repeat(7,1fr)] gap-px">
+              <div className="text-[10px] text-stone-400 pr-1.5 text-right leading-6">{hh(h)}</div>
+              {dias.map(d => {
+                const f  = iso(d);
+                const oD = ocupado('Diego', f, h);
+                const oG = ocupado('Gabriela', f, h);
+                const libre = !oD && !oG;
+                let cls = 'bg-stone-100';
+                if (oD && oG) cls = 'bg-stone-300';
+                else if (oD)  cls = 'bg-sky-200';
+                else if (oG)  cls = 'bg-rose-200';
+                else if (modo === 'plan') cls = 'bg-emerald-100 hover:bg-emerald-300 cursor-pointer';
+                else cls = 'bg-emerald-50 hover:bg-stone-200 cursor-pointer';
+                return (
+                  <button key={f} onClick={() => click(f, h)} disabled={busy || (modo === 'plan' && !libre)}
+                          title={libre ? 'Libre para los dos' : [oD && 'Diego', oG && 'Gabriela'].filter(Boolean).join(' y ') + ' ocupado'}
+                          className={`h-6 rounded-[3px] transition ${cls} ${modo === 'plan' && !libre ? 'cursor-default opacity-60' : ''}`} />
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-stone-100 text-xs text-stone-500">
+          <span><i className="inline-block w-3 h-3 rounded-sm bg-emerald-100 mr-1.5 align-middle"></i>Libres los dos</span>
+          <span><i className="inline-block w-3 h-3 rounded-sm bg-sky-200 mr-1.5 align-middle"></i>Diego ocupado</span>
+          <span><i className="inline-block w-3 h-3 rounded-sm bg-rose-200 mr-1.5 align-middle"></i>Gabriela ocupada</span>
+          <span><i className="inline-block w-3 h-3 rounded-sm bg-stone-300 mr-1.5 align-middle"></i>Ambos ocupados</span>
+        </div>
+      </Card>
+
+      <p className="text-sm text-stone-500 text-center">
+        {libresEstaSemana > 0
+          ? <><b className="text-stone-900">{libresEstaSemana}</b> horas libres en común esta semana</>
+          : 'Ninguna hora libre en común esta semana'}
+      </p>
+
+      {(pendientes.length > 0 || proximos.length > 0) && (
+        <Card className="p-5">
+          <p className="text-xs uppercase tracking-wide text-stone-400 mb-3">Planes</p>
+          <div className="divide-y divide-stone-100">
+            {[...proximos, ...pendientes].map(p => (
+              <div key={p.id} className="flex items-center gap-3 py-2.5">
+                <span className="text-lg">{p.estado === 'aceptado' ? '✅' : '⏳'}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm truncate">{p.titulo}</p>
+                  <p className="text-xs text-stone-400">{nombreLargo(String(p.fecha))} · {hh(p.hora)}</p>
+                </div>
+                <span className="text-xs text-stone-400 capitalize">{p.estado}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <Card className="p-5">
+        <button onClick={() => setRutinaAbierta(!rutinaAbierta)} className="flex w-full items-center justify-between">
+          <span className="text-xs uppercase tracking-wide text-stone-400">Mi rutina semanal fija</span>
+          <span className="text-stone-400">{rutinaAbierta ? '−' : '+'}</span>
+        </button>
+        {rutinaAbierta && <EditorRutina data={data} recargar={recargar} yo={yo} />}
+      </Card>
+
+      {plan && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-stone-900/40 p-4" onClick={() => setPlan(null)}>
+          <Card className="w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+            <p className="text-xs uppercase tracking-wide text-stone-400">Proponer plan</p>
+            <p className="text-base font-medium mt-1 mb-4 capitalize">{nombreLargo(plan.fecha)}, {hh(plan.hora)}</p>
+            <form onSubmit={enviarPlan} className="space-y-3">
+              <Input autoFocus placeholder="Ej: Cenar en el italiano" value={plan.titulo}
+                     onChange={e => setPlan({ ...plan, titulo: e.target.value })} />
+              <Input placeholder="Detalle (opcional)" value={plan.descripcion}
+                     onChange={e => setPlan({ ...plan, descripcion: e.target.value })} />
+              <div className="flex gap-2 pt-1">
+                <Btn type="button" variant="ghost" className="flex-1" onClick={() => setPlan(null)}>Cancelar</Btn>
+                <Btn className="flex-1" disabled={busy}>{busy ? 'Enviando…' : 'Enviar por correo'}</Btn>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EditorRutina({ data, recargar, yo }) {
+  const [f, setF] = useState({ dia_semana: 1, hora_inicio: 9, hora_fin: 18, tipo: 'Trabajo' });
+  const mias = data.rutina.filter(r => r.persona === yo);
+
+  const add = async e => {
+    e.preventDefault();
+    if (Number(f.hora_fin) <= Number(f.hora_inicio)) return alert('La hora de término debe ser posterior al inicio.');
+    recargar(await api('addRutina', { rutina: { ...f, persona: yo } }));
+  };
+
+  return (
+    <div className="mt-4 space-y-3">
+      <p className="text-xs text-stone-500">
+        Define una vez tus bloques fijos (trabajo, clases del MBA) y se repiten todas las semanas.
+        Para excepciones puntuales, marca directo en el calendario.
+      </p>
+
+      <div className="divide-y divide-stone-100">
+        {mias.map(r => (
+          <div key={r.id} className="flex items-center gap-2 py-2 text-sm">
+            <span className="w-9 font-medium text-stone-500">{DIAS[Number(r.dia_semana)]}</span>
+            <span className="tabular-nums text-stone-600">{hh(r.hora_inicio)}–{hh(r.hora_fin)}</span>
+            <span className="text-stone-400 flex-1 truncate">{r.tipo}</span>
+            <button onClick={async () => recargar(await api('delRutina', { id: r.id }))}
+                    className="text-stone-300 hover:text-red-500 px-1">×</button>
+          </div>
+        ))}
+        {mias.length === 0 && <p className="text-sm text-stone-400 py-1">Sin bloques fijos.</p>}
+      </div>
+
+      <form onSubmit={add} className="grid grid-cols-2 gap-2">
+        <Select value={f.dia_semana} onChange={e => setF({ ...f, dia_semana: e.target.value })}>
+          {[1, 2, 3, 4, 5, 6, 0].map(d => <option key={d} value={d}>{DIAS[d]}</option>)}
+        </Select>
+        <Input placeholder="Tipo" value={f.tipo} onChange={e => setF({ ...f, tipo: e.target.value })} />
+        <Select value={f.hora_inicio} onChange={e => setF({ ...f, hora_inicio: e.target.value })}>
+          {HORAS.map(h => <option key={h} value={h}>Desde {hh(h)}</option>)}
+        </Select>
+        <Select value={f.hora_fin} onChange={e => setF({ ...f, hora_fin: e.target.value })}>
+          {[...HORAS, 23].map(h => <option key={h} value={h}>Hasta {hh(h)}</option>)}
+        </Select>
+        <Btn variant="ghost" className="col-span-2">Agregar bloque</Btn>
+      </form>
+    </div>
+  );
+}
+
+// ═════════════ APP ═════════════
+function App() {
+  const [yo, setYo]       = useState(() => sessionStorageSafe('persona'));
+  const [data, setData]   = useState(null);
+  const [vista, setVista] = useState('gastos');
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!yo) return;
+    api('data').then(setData).catch(e => setError(e.message));
+  }, [yo]);
+
+  if (!yo) return <Login onEntrar={p => { setYo(p); try { sessionStorage.setItem('persona', p); } catch (e) {} }} />;
+
+  if (error) return (
+    <div className="p-8 text-center text-sm">
+      <p className="text-red-600 font-medium mb-2">No se pudo conectar</p>
+      <p className="text-stone-500">{error}</p>
+      <p className="text-stone-400 mt-4 text-xs">Revisa WEB_APP_URL y que el token coincida con Codigo.gs</p>
+    </div>
+  );
+
+  if (!data) return <div className="p-16 text-center text-sm text-stone-400">Cargando…</div>;
+
+  return (
+    <div className="mx-auto max-w-2xl px-4 py-5 pb-24">
+      <header className="flex items-center justify-between mb-5">
+        <h1 className="text-lg font-semibold tracking-tight">Casa &amp; Citas</h1>
+        <span className="text-sm text-stone-400">
+          <span className={`inline-block w-2 h-2 rounded-full mr-1.5 ${COLOR[yo]}`}></span>{yo}
+        </span>
+      </header>
+
+      {vista === 'gastos'
+        ? <Gastos data={data} recargar={setData} yo={yo} />
+        : <Calendario data={data} recargar={setData} yo={yo} />}
+
+      <nav className="fixed bottom-0 inset-x-0 border-t border-stone-200 bg-white/90 backdrop-blur">
+        <div className="mx-auto max-w-2xl grid grid-cols-2">
+          {[['gastos', '💰', 'Gastos'], ['calendario', '📅', 'Calendario']].map(([k, ico, label]) => (
+            <button key={k} onClick={() => setVista(k)}
+              className={`py-3 text-xs font-medium transition ${vista === k ? 'text-stone-900' : 'text-stone-400'}`}>
+              <span className="block text-lg leading-tight">{ico}</span>{label}
+            </button>
+          ))}
+        </div>
+      </nav>
+    </div>
+  );
+}
+
+function sessionStorageSafe(k) {
+  try { return sessionStorage.getItem(k); } catch (e) { return null; }
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

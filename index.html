@@ -8,7 +8,14 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+<script>
+  // Babel 8 compila JSX al "runtime automático", que emite un import y no corre
+  // en un <script> normal. Esto lo fuerza al runtime clásico (React.createElement).
+  Babel.registerPreset('react-classic', {
+    presets: [[Babel.availablePresets.react, { runtime: 'classic' }]]
+  });
+</script>
 <style>
   body { -webkit-tap-highlight-color: transparent; }
   ::-webkit-scrollbar { height: 6px; width: 6px; }
@@ -18,7 +25,7 @@
 <body class="bg-stone-50 text-stone-900 antialiased">
 <div id="root"></div>
 
-<script type="text/babel" data-presets="react">
+<script type="text/babel" data-presets="react-classic">
 const { useState, useEffect, useMemo, useCallback } = React;
 
 /* ══════════════ CONFIGURACIÓN ══════════════
@@ -27,7 +34,8 @@ const { useState, useEffect, useMemo, useCallback } = React;
    3. Cambia los PIN                                */
 const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyZul-rE1Evzlh6XufFGNwQcKr-qwYn5kgeb1y7BVcdviAK_lM6lJYsYtJ0cQZOCuyE/exec';
 const TOKEN       = 'casa-gd-2026-x7k9m2p';
-const PINS        = { '070990': 'Diego', '135790': 'Gabriela' };   // ← cambia estos dos números
+// Claves de acceso: cualquier largo, letras y/o números. Deben ser distintas entre sí.
+const PINS        = { '070990': 'Diego', '135790': 'Gabriela' };
 /* ═══════════════════════════════════════════ */
 
 const CATEGORIAS = ['Supermercado', 'Arriendo/Gastos comunes', 'Servicios', 'Salidas', 'Transporte', 'Salud', 'Otros'];
@@ -76,8 +84,8 @@ async function api(action, payload = {}) {
 }
 
 // ─────────── componentes base ───────────
-const Card = ({ children, className = '' }) =>
-  <div className={`bg-white rounded-2xl border border-stone-200/80 ${className}`}>{children}</div>;
+const Card = ({ children, className = '', ...p }) =>
+  <div className={`bg-white rounded-2xl border border-stone-200/80 ${className}`} {...p}>{children}</div>;
 
 const Btn = ({ children, onClick, variant = 'primary', className = '', ...p }) => {
   const v = {
@@ -99,30 +107,37 @@ function Login({ onEntrar }) {
   const [pin, setPin] = useState('');
   const [err, setErr] = useState(false);
 
-  const probar = v => {
+  // Acepta claves de cualquier largo y con cualquier carácter.
+  // Entra sola apenas la clave coincide; si no, con Enter o el botón.
+  const escribir = v => {
     setPin(v);
     setErr(false);
-    if (v.length === 4) {
-      if (PINS[v]) onEntrar(PINS[v]);
-      else { setErr(true); setTimeout(() => setPin(''), 400); }
-    }
+    if (PINS[v]) onEntrar(PINS[v]);
+  };
+
+  const enviar = e => {
+    e.preventDefault();
+    if (PINS[pin]) return onEntrar(PINS[pin]);
+    setErr(true);
+    setTimeout(() => setPin(''), 500);
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center px-6">
-      <div className="w-full max-w-xs text-center">
+      <form onSubmit={enviar} className="w-full max-w-xs text-center">
         <div className="text-4xl mb-3">🏠</div>
         <h1 className="text-xl font-semibold tracking-tight">Casa &amp; Citas</h1>
-        <p className="text-sm text-stone-500 mt-1 mb-7">Ingresa tu PIN</p>
+        <p className="text-sm text-stone-500 mt-1 mb-7">Ingresa tu clave</p>
 
         <input
-          value={pin} onChange={e => probar(e.target.value.replace(/\D/g, '').slice(0, 4))}
-          type="tel" inputMode="numeric" autoFocus placeholder="••••"
-          className={`w-full text-center text-3xl tracking-[0.5em] rounded-2xl border-2 bg-white py-4 outline-none transition
+          value={pin} onChange={e => escribir(e.target.value)}
+          type="password" autoFocus autoComplete="current-password" placeholder="••••••"
+          className={`w-full text-center text-2xl tracking-widest rounded-2xl border-2 bg-white py-4 outline-none transition
             ${err ? 'border-red-400 text-red-500' : 'border-stone-200 focus:border-stone-900'}`}
         />
-        {err && <p className="text-sm text-red-500 mt-3">PIN incorrecto</p>}
-      </div>
+        {err && <p className="text-sm text-red-500 mt-3">Clave incorrecta</p>}
+        <Btn className="w-full mt-3">Entrar</Btn>
+      </form>
     </div>
   );
 }

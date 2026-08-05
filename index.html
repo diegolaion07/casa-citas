@@ -2,641 +2,875 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#faf9f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17161a" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Casa &amp; Citas</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
-<script>
-  // Babel 8 compila JSX al "runtime automático", que emite un import y no corre
-  // en un <script> normal. Esto lo fuerza al runtime clásico (React.createElement).
-  Babel.registerPreset('react-classic', {
-    presets: [[Babel.availablePresets.react, { runtime: 'classic' }]]
-  });
-</script>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏡</text></svg>">
 <style>
-  body { -webkit-tap-highlight-color: transparent; }
-  ::-webkit-scrollbar { height: 6px; width: 6px; }
-  ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 3px; }
+:root{
+  --bg:#f8f7f5; --card:#fff; --card2:#fbfaf9;
+  --ink:#1c1917; --muted:#6f6963; --faint:#a8a29e;
+  --line:#ebe8e4; --line2:#f4f2ef;
+  --green:#0f7a43; --green-bg:#dff5e7; --red:#c02748; --red-bg:#ffe6ea;
+  --amber:#b45309; --amber-bg:#fef3c7;
+  --diego:#0a7ea4; --diego-bg:#dbf0f7; --gabi:#d6336c; --gabi-bg:#fde4ed;
+  --sh:0 1px 2px rgba(28,25,23,.05), 0 6px 20px -8px rgba(28,25,23,.10);
+  --sh-hero:0 8px 30px -10px rgba(28,25,23,.45);
+  --r:20px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#17161a; --card:#211f24; --card2:#26242a;
+    --ink:#f2f0ee; --muted:#a29d97; --faint:#78716c;
+    --line:#322f36; --line2:#2a272e;
+    --green:#4ade80; --green-bg:#15351f; --red:#fb7185; --red-bg:#3a1620;
+    --amber:#fbbf24; --amber-bg:#3a2c0a;
+    --diego:#38bdf8; --diego-bg:#0d2f3d; --gabi:#fb7185; --gabi-bg:#3d1526;
+    --sh:0 1px 2px rgba(0,0,0,.3), 0 6px 20px -8px rgba(0,0,0,.5);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  font:400 16px/1.5 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  background:var(--bg);color:var(--ink);
+  padding-bottom:calc(78px + env(safe-area-inset-bottom));
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:600px;margin:0 auto;padding:14px 15px}
+button,input,select{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.015em}
+
+header{display:flex;align-items:center;justify-content:space-between;padding:8px 3px 16px}
+header h1{font-size:17px;font-weight:650;letter-spacing:-.025em}
+.av{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+.av i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  font-size:12px;font-weight:700;color:#fff;font-style:normal}
+.av i.Diego{background:var(--diego)} .av i.Gabriela{background:var(--gabi)}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);margin-bottom:13px}
+.p{padding:19px}
+.tit{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin-bottom:14px}
+
+/* meses */
+.meses{display:flex;gap:7px;overflow-x:auto;padding:2px 2px 13px;scrollbar-width:none}
+.meses::-webkit-scrollbar{display:none}
+.mes{flex:none;padding:9px 16px;border-radius:999px;background:var(--card);border:1px solid var(--line);
+  font-size:14px;font-weight:500;color:var(--muted);white-space:nowrap;box-shadow:var(--sh)}
+.mes.on{background:var(--ink);border-color:var(--ink);color:var(--bg);font-weight:600}
+
+/* hero */
+.hero{position:relative;overflow:hidden;border:0;border-radius:24px;color:#fff;
+  background:linear-gradient(152deg,#3a3531 0%,#1c1917 55%,#141210 100%);
+  box-shadow:var(--sh-hero);padding:24px 22px 18px;margin-bottom:13px}
+.hero::after{content:'';position:absolute;top:-70px;right:-50px;width:220px;height:220px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.10),transparent 68%);pointer-events:none}
+.hero .lbl{font-size:13.5px;color:rgba(255,255,255,.62);letter-spacing:.01em}
+.hero .big{font-size:44px;font-weight:650;letter-spacing:-.04em;line-height:1.08;margin:5px 0 3px}
+.hero .big.neg{color:#fda4af}
+.hero .sub{font-size:12.5px;color:rgba(255,255,255,.48)}
+.chip{display:inline-flex;align-items:center;gap:5px;margin-top:11px;padding:5px 11px;border-radius:999px;
+  font-size:12.5px;font-weight:600;background:rgba(255,255,255,.11);color:rgba(255,255,255,.9)}
+.chip.up{background:rgba(74,222,128,.16);color:#86efac}
+.chip.dn{background:rgba(251,113,133,.16);color:#fda4af}
+.spark{margin-top:14px;position:relative;z-index:1}
+.spark svg{display:block;width:100%;height:auto}
+
+/* flujo */
+.flujo{display:grid;gap:1px;background:var(--line2);border-radius:15px;overflow:hidden}
+.fila{display:flex;align-items:center;gap:13px;background:var(--card);padding:14px 15px}
+.fila.total{background:var(--card2)}
+.ic{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;font-size:16px;flex:none}
+.ic.in{background:var(--green-bg)} .ic.out{background:var(--red-bg)} .ic.eq{background:var(--amber-bg)}
+.fila .tx{flex:1;text-align:left;font-size:15px}
+.fila .tx small{display:block;font-size:12px;color:var(--faint);margin-top:1px;font-weight:400}
+.fila .vl{font-size:16.5px;font-weight:650}
+.vl.in{color:var(--green)} .vl.out{color:var(--ink)} .vl.neg{color:var(--red)}
+
+/* anillo */
+.anillo{display:flex;align-items:center;gap:18px}
+.anillo svg{width:104px;height:104px;flex:none}
+.anillo .rbg{fill:none;stroke:var(--line2);stroke-width:11}
+.anillo .rfg{fill:none;stroke-width:11;stroke-linecap:round;
+  transform:rotate(-90deg);transform-origin:60px 60px;transition:stroke-dashoffset .7s cubic-bezier(.2,.8,.2,1)}
+.anillo .rfg.ok{stroke:var(--green)} .anillo .rfg.mal{stroke:var(--red)} .anillo .rfg.mid{stroke:var(--amber)}
+.anillo .pc{font:650 25px/1 ui-sans-serif,system-ui,sans-serif;fill:var(--ink);letter-spacing:-.03em}
+.anillo .pl{font:500 10.5px/1 ui-sans-serif,system-ui,sans-serif;fill:var(--faint);letter-spacing:.04em}
+.anillo .de{font-size:14.5px;color:var(--muted);line-height:1.5}
+.anillo .de b{color:var(--ink);font-weight:650}
+
+.verdict{display:flex;gap:11px;align-items:flex-start;padding:14px 15px;border-radius:15px;margin-top:16px;
+  font-size:14px;line-height:1.5}
+.verdict.ok{background:var(--green-bg);color:var(--green)}
+.verdict.mal{background:var(--red-bg);color:var(--red)}
+.verdict.mid{background:var(--amber-bg);color:var(--amber)}
+.verdict.neutro{background:var(--line2);color:var(--muted)}
+.verdict b{font-weight:700}
+.verdict .em{font-size:19px;line-height:1.2;flex:none}
+
+/* cuentas */
+.cta{display:flex;align-items:center;gap:13px;padding:13px 0;border-bottom:1px solid var(--line2)}
+.cta:last-child{border-bottom:0;padding-bottom:2px}
+.cta .in{flex:1;min-width:0}
+.cta .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:7px}
+.cta .nm{font-size:14.5px;font-weight:500}
+.cta .mt{font-size:13.5px;color:var(--faint);white-space:nowrap}
+.cta .mt b{color:var(--ink);font-weight:650}
+.cta .nota{font-size:11.5px;color:var(--faint);margin-top:6px}
+.cta .nota.mal{color:var(--red)}
+.bar{height:7px;border-radius:999px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.bar i.ok{background:var(--green)} .bar i.mal{background:var(--red)} .bar i.mid{background:var(--amber)}
+
+/* movimientos */
+.mov{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line2)}
+.mov:last-child{border-bottom:0;padding-bottom:2px}
+.mov .who{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;
+  font-size:12px;font-weight:700;color:#fff}
+.mov .who.Diego{background:var(--diego)} .mov .who.Gabriela{background:var(--gabi)}
+.mov .in{flex:1;min-width:0}
+.mov .in p{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mov .in small{font-size:11.5px;color:var(--faint)}
+.mov .mn{font-size:15px;font-weight:600}
+.mov .x{color:var(--faint);padding:8px 2px;font-size:18px;line-height:1;opacity:.5}
+
+/* botones */
+.btn{display:block;width:100%;padding:15px;border-radius:16px;background:var(--ink);color:var(--bg);
+  font-size:15px;font-weight:650;text-align:center;box-shadow:var(--sh);transition:transform .1s}
+.btn.sec{background:var(--line2);color:var(--ink);box-shadow:none}
+.btn:active{transform:scale(.985)}
+.btn:disabled{opacity:.45}
+.row2{display:flex;gap:9px}.row2>*{flex:1}
+
+label{display:block;font-size:12.5px;color:var(--muted);margin:0 0 6px 3px;font-weight:500}
+.fld{margin-bottom:13px}
+input,select{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:14px;
+  background:var(--card2);outline:0;font-size:16px;appearance:none;transition:border-color .15s}
+input:focus,select:focus{border-color:var(--ink);background:var(--card)}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a8a29e' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 15px center;padding-right:38px}
+
+/* sugerencias */
+.sug{display:flex;align-items:center;gap:13px;padding:13px 0;border-bottom:1px solid var(--line2)}
+.sug:last-child{border-bottom:0;padding-bottom:2px}
+.sug .cal{width:48px;height:54px;border-radius:14px;background:var(--card2);border:1px solid var(--line);
+  display:grid;place-items:center;line-height:1.15;text-align:center;flex:none}
+.sug .cal b{display:block;font-size:19px;font-weight:650;letter-spacing:-.02em}
+.sug .cal span{font-size:9.5px;text-transform:uppercase;color:var(--faint);letter-spacing:.06em;font-weight:600}
+.sug .in{flex:1;min-width:0}
+.sug .in p{font-size:15px;font-weight:500}
+.sug .in small{font-size:12.5px;color:var(--faint)}
+.sug .go{padding:10px 16px;border-radius:999px;background:var(--ink);color:var(--bg);
+  font-size:13px;font-weight:650;flex:none}
+
+/* calendario */
+.modos{display:flex;gap:4px;background:var(--line2);padding:4px;border-radius:15px;margin-bottom:13px}
+.modos button{flex:1;padding:10px 6px;border-radius:12px;font-size:13px;font-weight:600;color:var(--muted)}
+.modos button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.09)}
+.navsem{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.navsem .s{font-size:13.5px;color:var(--muted);font-weight:500}
+.navsem button{width:36px;height:36px;border-radius:12px;background:var(--card2);border:1px solid var(--line);
+  font-size:15px;font-weight:700;color:var(--muted)}
+.grid{display:grid;grid-template-columns:32px repeat(7,1fr);gap:3px}
+.gh{text-align:center;padding:2px 0 8px;width:100%;border-radius:9px}
+.gh b{display:block;font-size:14.5px;font-weight:600;letter-spacing:-.02em}
+.gh span{font-size:9.5px;text-transform:uppercase;color:var(--faint);letter-spacing:.05em;font-weight:600}
+.gh.hoy b{width:24px;height:24px;line-height:24px;margin:1px auto 0;border-radius:50%;
+  background:var(--ink);color:var(--bg)}
+.gh.lleno{background:var(--line2)}
+.gh:active{transform:scale(.92)}
+.gt{font-size:9.5px;color:var(--faint);text-align:right;padding-right:5px;line-height:26px}
+.cel{height:26px;border-radius:7px;background:var(--line2);width:100%;transition:background .15s,transform .1s}
+.cel.libre{background:var(--green-bg)}
+.cel.d{background:var(--diego-bg)} .cel.g{background:var(--gabi-bg)} .cel.dg{background:var(--line)}
+.cel:active{transform:scale(.88)}
+.leg{display:flex;flex-wrap:wrap;gap:11px;margin-top:15px;padding-top:14px;border-top:1px solid var(--line2);
+  font-size:11.5px;color:var(--muted)}
+.leg i{display:inline-block;width:11px;height:11px;border-radius:4px;margin-right:5px;vertical-align:-1px}
+
+/* planes */
+.plan{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line2)}
+.plan:last-child{border-bottom:0;padding-bottom:2px}
+.plan .em{font-size:21px}
+.plan .in{flex:1;min-width:0}
+.plan .in p{font-size:14.5px;font-weight:500}
+.plan .in small{font-size:11.5px;color:var(--faint)}
+.pill{font-size:10.5px;font-weight:700;padding:5px 10px;border-radius:999px;background:var(--line2);
+  color:var(--muted);letter-spacing:.02em;white-space:nowrap}
+.pill.ok{background:var(--green-bg);color:var(--green)}
+
+.acc{display:flex;width:100%;justify-content:space-between;align-items:center}
+.rut{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line2);font-size:14px}
+.rut:last-of-type{border-bottom:0}
+.rut .d{width:34px;font-weight:650;color:var(--muted)}
+.rut .h{color:var(--muted)}
+.rut .t{flex:1;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+nav{position:fixed;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--card) 88%,transparent);
+  backdrop-filter:blur(16px) saturate(1.6);-webkit-backdrop-filter:blur(16px) saturate(1.6);
+  border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:40}
+nav .inner{max-width:600px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr}
+nav button{padding:10px 0 12px;font-size:10.5px;font-weight:650;color:var(--faint);letter-spacing:.01em}
+nav button.on{color:var(--ink)}
+nav .e{display:block;font-size:21px;line-height:1.3;filter:grayscale(1);opacity:.45;transition:.15s}
+nav button.on .e{filter:none;opacity:1;transform:translateY(-1px)}
+
+.ov{position:fixed;inset:0;background:rgba(20,18,16,.5);backdrop-filter:blur(3px);
+  display:flex;align-items:flex-end;justify-content:center;padding:14px;z-index:60;
+  animation:fade .2s ease}
+.ov .card{width:100%;max-width:420px;margin:0;animation:up .3s cubic-bezier(.2,.9,.25,1)}
+@keyframes fade{from{opacity:0}}
+@keyframes up{from{transform:translateY(22px);opacity:0}}
+@media(min-width:520px){.ov{align-items:center}}
+
+.login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.login .bx{width:100%;max-width:300px;text-align:center}
+.login .em{font-size:50px;margin-bottom:12px}
+.login h1{font-size:22px;font-weight:650;letter-spacing:-.025em}
+.login p{font-size:14px;color:var(--muted);margin:5px 0 24px}
+.login input{text-align:center;font-size:21px;letter-spacing:.2em;padding:17px;border-width:2px;border-radius:18px}
+.login input.err{border-color:var(--red);color:var(--red);animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.login .msg{font-size:13px;color:var(--red);margin-top:11px;min-height:18px}
+
+.vacio{font-size:14px;color:var(--faint);padding:5px 0;line-height:1.55}
+.sync{font-size:11px;color:var(--faint);text-align:center;padding:0 0 10px;letter-spacing:.03em}
+.sync.off{color:var(--amber);background:var(--amber-bg);border-radius:10px;padding:8px;margin-bottom:11px}
+
+/* saldo entre los dos */
+.saldo2{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line2)}
+.saldo2:last-of-type{border-bottom:0}
+.saldo2 .who{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;
+  font-size:12px;font-weight:700;color:#fff}
+.saldo2 .who.Diego{background:var(--diego)} .saldo2 .who.Gabriela{background:var(--gabi)}
+.saldo2 .n{flex:1;font-size:14.5px}
+.saldo2 .v{font-size:15px;font-weight:600}
+.expl{font-size:13px;color:var(--muted);line-height:1.6;margin-top:12px}
 </style>
 </head>
-<body class="bg-stone-50 text-stone-900 antialiased">
-<div id="root"></div>
+<body>
+<div id="app"></div>
 
-<script type="text/babel" data-presets="react-classic">
-const { useState, useEffect, useMemo, useCallback } = React;
-
-/* ══════════════ CONFIGURACIÓN ══════════════
-   1. Pega aquí la URL del Web App de Apps Script
-   2. Usa el MISMO token que pusiste en Codigo.gs
-   3. Cambia los PIN                                */
-const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx9bx3PAQLqPq8bY9YaEhq43xKZryh8pxTC1cRUaC5dLfLTi-f4IYLOFMX0rkAbQ_Gj/exec';
-const TOKEN       = 'casa-gd-2026-x7k9m2p';
-// Claves de acceso: cualquier largo, letras y/o números. Deben ser distintas entre sí.
-const PINS        = { '070990': 'Diego', '135790': 'Gabriela' };
+<script>
+/* ══════════════ CONFIGURACIÓN ══════════════ */
+var WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx9bx3PAQLqPq8bY9YaEhq43xKZryh8pxTC1cRUaC5dLfLTi-f4IYLOFMX0rkAbQ_Gj/exec';
+var TOKEN = 'casa-gd-2026-x7k9m2p';
+var PINS  = { '070990':'Diego', '135790':'Gabriela' };
 /* ═══════════════════════════════════════════ */
 
-const CATEGORIAS = ['Supermercado', 'Arriendo/Gastos comunes', 'Servicios', 'Salidas', 'Transporte', 'Salud', 'Otros'];
-const DIAS  = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-const HORAS = Array.from({ length: 15 }, (_, i) => i + 8);   // 08:00 → 22:00
-const COLOR = { Diego: 'bg-sky-500', Gabriela: 'bg-rose-400' };
+var DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+var DIAS_L=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+var MES_L=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+var HORAS=[8,9,10,11,12,13,14,15,16,17,18,19,20,21,22];
+var ICONOS={SUPER:'🛒',SUPERMERCADO:'🛒',FERIA:'🥬',LUZ:'💡',AGUA:'🚿',GAS:'🔥',GGCC:'🏢',
+  DIVIDENDO:'🏠',ARRIENDO:'🏠',OTROS:'📦',SALIDAS:'🍽️',TRANSPORTE:'🚗',AUTO:'🚗',BENCINA:'⛽',
+  SALUD:'💊',INTERNET:'📶',CELULAR:'📱',MASCOTA:'🐾',DEPOSITO:'💵','CUENTA CORRIENTE':'🏦',
+  SUELDO:'💵',AHORRO:'🐖',EDUCACION:'🎓',MBA:'🎓'};
 
-// ─────────── utilidades ───────────
-const clp = n => '$' + Number(n || 0).toLocaleString('es-CL', { maximumFractionDigits: 0 });
-const hh  = h => String(h).padStart(2, '0') + ':00';
-
-const hoyISO = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-const mesDe = f => String(f).slice(0, 7);
-
-const mesAnterior = m => {
-  const [y, mm] = m.split('-').map(Number);
-  const d = new Date(y, mm - 2, 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-};
-
-const lunesDe = base => {
-  const d = new Date(base);
-  const off = (d.getDay() + 6) % 7;
-  d.setDate(d.getDate() - off);
-  d.setHours(12, 0, 0, 0);
-  return d;
-};
-
-const nombreLargo = f =>
-  new Date(f + 'T12:00:00').toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
-
-async function api(action, payload = {}) {
-  const res = await fetch(WEB_APP_URL, {
-    method: 'POST',
-    // text/plain a propósito: evita el preflight CORS que Apps Script no contesta
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action, token: TOKEN, ...payload })
-  });
-  const j = await res.json();
-  if (!j.ok) throw new Error(j.error || 'Error del servidor');
-  return j.data;
+/* ---------- utilidades ---------- */
+function $(s,r){return (r||document).querySelector(s)}
+function clp(n){return '$'+(Math.round(Number(n)||0)).toLocaleString('es-CL')}
+function corto(n){
+  n=Math.round(Number(n)||0); var a=Math.abs(n);
+  if(a>=1e6) return (n/1e6).toFixed(1).replace('.',',').replace(',0','')+'M';
+  if(a>=1e3) return Math.round(n/1e3)+'k';
+  return String(n);
 }
+function hh(h){return (h<10?'0':'')+h+':00'}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function iso(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)}
+function hoy(){return iso(new Date())}
+function ym(f){return String(f).slice(0,7)}
+function icono(n){return ICONOS[String(n).trim().toUpperCase()]||'💳'}
+function lunesDe(b){var d=new Date(b);d.setDate(d.getDate()-((d.getDay()+6)%7));d.setHours(12,0,0,0);return d}
+function fechaLarga(f){var d=new Date(f+'T12:00:00');return DIAS_L[d.getDay()]+' '+d.getDate()+' de '+MES_L[d.getMonth()]}
+function nombreMes(y){var p=y.split('-');return MES_L[+p[1]-1]+' '+p[0]}
+function mesCorto(y){var p=y.split('-');return capital(MES_L[+p[1]-1].slice(0,3))}
+function capital(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+function diasDelMes(y){var p=y.split('-');return new Date(+p[0],+p[1],0).getDate()}
 
-// ─────────── componentes base ───────────
-const Card = ({ children, className = '', ...p }) =>
-  <div className={`bg-white rounded-2xl border border-stone-200/80 ${className}`} {...p}>{children}</div>;
+/* ---------- estado ---------- */
+var S={yo:null,data:null,vista:'plata',mes:null,semana:lunesDe(new Date()),
+       modo:'ocupado',form:false,rutina:false,plan:null,sync:false,busy:false,offline:false};
 
-const Btn = ({ children, onClick, variant = 'primary', className = '', ...p }) => {
-  const v = {
-    primary: 'bg-stone-900 text-white hover:bg-stone-700',
-    ghost:   'bg-stone-100 text-stone-700 hover:bg-stone-200',
-    danger:  'text-stone-400 hover:text-red-600'
-  }[variant];
-  return <button onClick={onClick} className={`rounded-xl px-4 py-2.5 text-sm font-medium transition ${v} ${className}`} {...p}>{children}</button>;
-};
+function guardaLocal(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function leeLocal(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
 
-const Input = props =>
-  <input {...props} className={`w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-stone-400 ${props.className || ''}`} />;
+function pedir(action,extra){
+  var body={action:action,token:TOKEN};
+  for(var k in extra) body[k]=extra[k];
 
-const Select = ({ children, ...p }) =>
-  <select {...p} className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-stone-400">{children}</select>;
+  // Tiempo límite: sin esto, una petición colgada bloquea la fila para siempre
+  // y la app queda muerta sin decir nada.
+  var ctrl = typeof AbortController!=='undefined' ? new AbortController() : null;
+  var reloj = setTimeout(function(){ if(ctrl) ctrl.abort() }, 25000);
 
-// ═════════════ LOGIN ═════════════
-function Login({ onEntrar }) {
-  const [pin, setPin] = useState('');
-  const [err, setErr] = useState(false);
-
-  // Acepta claves de cualquier largo y con cualquier carácter.
-  // Entra sola apenas la clave coincide; si no, con Enter o el botón.
-  const escribir = v => {
-    setPin(v);
-    setErr(false);
-    if (PINS[v]) onEntrar(PINS[v]);
-  };
-
-  const enviar = e => {
-    e.preventDefault();
-    if (PINS[pin]) return onEntrar(PINS[pin]);
-    setErr(true);
-    setTimeout(() => setPin(''), 500);
-  };
-
-  return (
-    <div className="flex min-h-screen items-center justify-center px-6">
-      <form onSubmit={enviar} className="w-full max-w-xs text-center">
-        <div className="text-4xl mb-3">🏠</div>
-        <h1 className="text-xl font-semibold tracking-tight">Casa &amp; Citas</h1>
-        <p className="text-sm text-stone-500 mt-1 mb-7">Ingresa tu clave</p>
-
-        <input
-          value={pin} onChange={e => escribir(e.target.value)}
-          type="password" autoFocus autoComplete="current-password" placeholder="••••••"
-          className={`w-full text-center text-2xl tracking-widest rounded-2xl border-2 bg-white py-4 outline-none transition
-            ${err ? 'border-red-400 text-red-500' : 'border-stone-200 focus:border-stone-900'}`}
-        />
-        {err && <p className="text-sm text-red-500 mt-3">Clave incorrecta</p>}
-        <Btn className="w-full mt-3">Entrar</Btn>
-      </form>
-    </div>
-  );
-}
-
-// ═════════════ GASTOS ═════════════
-function Gastos({ data, recargar, yo }) {
-  const pres = data.presupuesto || { meses: [], filas: [] };
-
-  // Cuentas de gasto del presupuesto = categorías disponibles al registrar
-  const cuentasGasto = useMemo(() =>
-    pres.filas.filter(f => f.valores.some(v => v < 0)).map(f => f.cuenta),
-    [pres.filas]);
-  const categorias = cuentasGasto.length ? cuentasGasto : CATEGORIAS;
-
-  const mesesDisponibles = useMemo(() => {
-    const s = new Set(pres.meses.map(m => m.ym));
-    data.gastos.forEach(g => s.add(mesDe(g.fecha)));
-    s.add(hoyISO().slice(0, 7));
-    return [...s].filter(Boolean).sort();
-  }, [pres.meses, data.gastos]);
-
-  const [mes, setMes]   = useState(() =>
-    mesesDisponibles.includes(hoyISO().slice(0, 7)) ? hoyISO().slice(0, 7) : mesesDisponibles[0]);
-  const [form, setForm] = useState({ fecha: hoyISO(), categoria: categorias[0], descripcion: '', monto: '', pagado_por: yo });
-  const [abierto, setAbierto] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  const idx = pres.meses.findIndex(m => m.ym === mes);
-  const val = (fila, i) => Number(fila.valores[i] || 0);
-
-  // ---- Plan del mes según la planilla ----
-  const entra   = idx < 0 ? 0 : pres.filas.reduce((s, f) => s + Math.max(0, val(f, idx)), 0);
-  const aPagar  = idx < 0 ? 0 : pres.filas.reduce((s, f) => s + Math.min(0, val(f, idx)), 0) * -1;
-  const netoPlan = entra - aPagar;
-
-  // Saldo acumulado proyectado al cierre de ese mes (la fila "Total" de tu planilla)
-  const saldo = idx < 0 ? 0 :
-    pres.meses.slice(0, idx + 1).reduce((acc, _, i) =>
-      acc + pres.filas.reduce((s, f) => s + val(f, i), 0), 0);
-
-  // ---- Real del mes según lo registrado ----
-  const delMes = useMemo(() => data.gastos.filter(g => mesDe(g.fecha) === mes), [data.gastos, mes]);
-  const realGastado = delMes.reduce((s, g) => s + Number(g.monto || 0), 0);
-  const diferencia = aPagar - realGastado;   // + ahorro, − sobregasto
-
-  const realPorCuenta = useMemo(() => {
-    const m = {};
-    delMes.forEach(g => {
-      const k = String(g.categoria || '').trim().toUpperCase();
-      m[k] = (m[k] || 0) + Number(g.monto || 0);
+  return fetch(WEB_APP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify(body), signal:ctrl?ctrl.signal:undefined})
+    .then(function(r){return r.json()})
+    .then(function(j){
+      clearTimeout(reloj);
+      if(!j.ok) throw new Error(j.error||'Error del servidor');
+      S.offline=false; S.data=j.data; guardaLocal('datos',j.data); return j.data;
+    })
+    .catch(function(e){
+      clearTimeout(reloj);
+      if(e && (e.name==='AbortError'||e instanceof TypeError)) S.offline=true;
+      throw (e && e.name==='AbortError') ? new Error('La conexión tardó demasiado') : e;
     });
-    return m;
-  }, [delMes]);
-
-  const comparativo = useMemo(() => {
-    if (idx < 0) return [];
-    return pres.filas
-      .filter(f => val(f, idx) < 0)
-      .map(f => {
-        const plan = -val(f, idx);
-        const real = realPorCuenta[f.cuenta.trim().toUpperCase()] || 0;
-        return { cuenta: f.cuenta, plan, real, dif: plan - real };
-      })
-      .sort((a, b) => b.plan - a.plan);
-  }, [pres.filas, idx, realPorCuenta]);
-
-  const porPersona = useMemo(() => {
-    const m = {};
-    delMes.forEach(g => { m[g.pagado_por] = (m[g.pagado_por] || 0) + Number(g.monto || 0); });
-    return m;
-  }, [delMes]);
-
-  const guardar = async e => {
-    e.preventDefault();
-    if (!form.monto || !form.descripcion) return;
-    setBusy(true);
-    try {
-      recargar(await api('addGasto', { gasto: form }));
-      setForm({ ...form, descripcion: '', monto: '' });
-      setAbierto(false);
-    } catch (err) { alert(err.message); }
-    setBusy(false);
-  };
-
-  const etiquetaMes = ym => {
-    const p = pres.meses.find(m => m.ym === ym);
-    if (p) return p.label.charAt(0) + p.label.slice(1).toLowerCase() + ' ' + ym.slice(0, 4);
-    return new Date(ym + '-02').toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Select value={mes} onChange={e => setMes(e.target.value)}>
-          {mesesDisponibles.map(m => <option key={m} value={m}>{etiquetaMes(m)}</option>)}
-        </Select>
-        <Btn onClick={() => setAbierto(!abierto)} className="shrink-0">{abierto ? 'Cerrar' : '+ Gasto'}</Btn>
-      </div>
-
-      {abierto && (
-        <Card className="p-4">
-          <form onSubmit={guardar} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <Input type="date" value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} />
-              <Input type="number" placeholder="Monto" value={form.monto} onChange={e => setForm({ ...form, monto: e.target.value })} />
-            </div>
-            <Input placeholder="Descripción" value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} />
-            <div className="grid grid-cols-2 gap-3">
-              <Select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })}>
-                {categorias.map(c => <option key={c}>{c}</option>)}
-              </Select>
-              <Select value={form.pagado_por} onChange={e => setForm({ ...form, pagado_por: e.target.value })}>
-                <option>Diego</option><option>Gabriela</option>
-              </Select>
-            </div>
-            <Btn className="w-full" disabled={busy}>{busy ? 'Guardando…' : 'Guardar'}</Btn>
-          </form>
-        </Card>
-      )}
-
-      {idx < 0 && (
-        <Card className="p-5 text-sm text-stone-500">
-          No hay presupuesto cargado para este mes. Agrega la columna en la pestaña
-          <b className="text-stone-700"> Presupuesto</b> de la planilla.
-        </Card>
-      )}
-
-      {idx >= 0 && (
-        <>
-          <Card className="p-5">
-            <p className="text-xs uppercase tracking-wide text-stone-400">Plata en la cuenta</p>
-            <p className={`text-3xl font-semibold tracking-tight mt-1 ${saldo < 0 ? 'text-red-600' : ''}`}>{clp(saldo)}</p>
-            <p className="text-xs text-stone-400 mt-1">Proyectado al cierre de {etiquetaMes(mes)}</p>
-
-            <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-stone-100">
-              <div>
-                <p className="text-xs text-stone-400">Entra este mes</p>
-                <p className="text-lg font-medium text-emerald-700 tabular-nums">{clp(entra)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-stone-400">Hay que pagar</p>
-                <p className="text-lg font-medium text-stone-800 tabular-nums">{clp(aPagar)}</p>
-              </div>
-            </div>
-            <p className="text-sm text-stone-500 mt-3">
-              Queda libre este mes: <b className={netoPlan < 0 ? 'text-red-600' : 'text-stone-900'}>{clp(netoPlan)}</b>
-            </p>
-          </Card>
-
-          <Card className="p-5">
-            <p className="text-xs uppercase tracking-wide text-stone-400 mb-3">Gasto real vs presupuesto</p>
-            <div className="flex items-end justify-between mb-2">
-              <div>
-                <p className="text-2xl font-semibold tabular-nums">{clp(realGastado)}</p>
-                <p className="text-xs text-stone-400">de {clp(aPagar)} presupuestados</p>
-              </div>
-              <p className={`text-right text-sm font-medium ${diferencia < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
-                {diferencia < 0 ? 'Te pasaste por' : 'Vas ahorrando'}<br />
-                <span className="text-lg tabular-nums">{clp(Math.abs(diferencia))}</span>
-              </p>
-            </div>
-            <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
-              <div className={`h-full rounded-full ${diferencia < 0 ? 'bg-red-500' : 'bg-emerald-600'}`}
-                   style={{ width: `${Math.min(100, aPagar ? (realGastado / aPagar) * 100 : 0)}%` }} />
-            </div>
-            {Object.keys(porPersona).length > 1 && (
-              <div className="flex gap-4 mt-4 pt-4 border-t border-stone-100 text-sm">
-                {Object.entries(porPersona).map(([p, v]) => (
-                  <div key={p}>
-                    <span className={`inline-block w-2 h-2 rounded-full mr-1.5 ${COLOR[p] || 'bg-stone-400'}`}></span>
-                    <span className="text-stone-500">{p}</span> <span className="font-medium">{clp(v)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-
-          <Card className="p-5">
-            <p className="text-xs uppercase tracking-wide text-stone-400 mb-3">Por cuenta</p>
-            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 gap-y-2 text-sm items-center">
-              <span className="text-xs text-stone-400"></span>
-              <span className="text-xs text-stone-400 text-right">Plan</span>
-              <span className="text-xs text-stone-400 text-right">Real</span>
-              <span className="text-xs text-stone-400 text-right">Dif.</span>
-              {comparativo.map(c => (
-                <React.Fragment key={c.cuenta}>
-                  <span className="text-stone-700 truncate">{c.cuenta}</span>
-                  <span className="text-right tabular-nums text-stone-400">{clp(c.plan)}</span>
-                  <span className="text-right tabular-nums">{c.real ? clp(c.real) : '—'}</span>
-                  <span className={`text-right tabular-nums ${c.dif < 0 ? 'text-red-600' : 'text-stone-400'}`}>
-                    {c.real ? clp(c.dif) : '—'}
-                  </span>
-                </React.Fragment>
-              ))}
-            </div>
-          </Card>
-        </>
-      )}
-
-      <Card className="p-5">
-        <p className="text-xs uppercase tracking-wide text-stone-400 mb-3">Movimientos</p>
-        <div className="divide-y divide-stone-100">
-          {[...delMes].sort((a, b) => String(b.fecha).localeCompare(String(a.fecha))).map(g => (
-            <div key={g.id} className="flex items-center gap-3 py-2.5 group">
-              <span className={`w-1.5 h-8 rounded-full shrink-0 ${COLOR[g.pagado_por] || 'bg-stone-300'}`}></span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm truncate">{g.descripcion}</p>
-                <p className="text-xs text-stone-400">{String(g.fecha).slice(8, 10)}/{String(g.fecha).slice(5, 7)} · {g.categoria}</p>
-              </div>
-              <span className="text-sm tabular-nums">{clp(g.monto)}</span>
-              <button onClick={async () => { if (confirm('¿Borrar?')) recargar(await api('delGasto', { id: g.id })); }}
-                      className="text-stone-300 hover:text-red-500 px-1 opacity-0 group-hover:opacity-100 transition">×</button>
-            </div>
-          ))}
-          {delMes.length === 0 && <p className="text-sm text-stone-400 py-2">Nada registrado todavía.</p>}
-        </div>
-      </Card>
-    </div>
-  );
 }
 
-// ═════════════ CALENDARIO ═════════════
-function Calendario({ data, recargar, yo }) {
-  const [lunes, setLunes] = useState(() => lunesDe(new Date()));
-  const [modo, setModo]   = useState('ocupado');   // 'ocupado' | 'plan'
-  const [plan, setPlan]   = useState(null);
-  const [rutinaAbierta, setRutinaAbierta] = useState(false);
-  const [busy, setBusy]   = useState(false);
+/**
+ * Las peticiones van en fila india. Sin esto, tocar varias celdas seguidas
+ * dispara peticiones en paralelo que se pisan y dejan el calendario desincronizado.
+ */
+var cola=Promise.resolve();
+function api(action,extra){
+  var p=cola.then(function(){return pedir(action,extra)});
+  cola=p.catch(function(){});
+  return p;
+}
 
-  const dias = useMemo(() =>
-    Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(lunes);
-      d.setDate(d.getDate() + i);
-      return d;
-    }), [lunes]);
+/* ---------- cálculos ---------- */
+function pres(){return (S.data&&S.data.presupuesto)||{meses:[],filas:[]}}
+function idxMes(){var m=pres().meses;for(var i=0;i<m.length;i++)if(m[i].ym===S.mes)return i;return -1}
 
-  const ocupado = useCallback((persona, fecha, hora) => {
-    const dow = new Date(fecha + 'T12:00:00').getDay();
-    const r = data.rutina.some(x =>
-      x.persona === persona && Number(x.dia_semana) === dow &&
-      hora >= Number(x.hora_inicio) && hora < Number(x.hora_fin));
-    const b = data.bloqueos.some(x =>
-      x.persona === persona && String(x.fecha) === fecha &&
-      hora >= Number(x.hora_inicio) && hora < Number(x.hora_fin));
-    return r || b;
-  }, [data.rutina, data.bloqueos]);
+function mesesDisponibles(){
+  var s={},o=[];
+  pres().meses.forEach(function(m){s[m.ym]=1});
+  (S.data.gastos||[]).forEach(function(g){if(g.fecha)s[ym(g.fecha)]=1});
+  s[hoy().slice(0,7)]=1;
+  for(var k in s) if(k) o.push(k);
+  return o.sort();
+}
 
-  const click = async (fecha, hora) => {
-    if (modo === 'plan') {
-      if (ocupado('Diego', fecha, hora) || ocupado('Gabriela', fecha, hora)) return;
-      setPlan({ fecha, hora, titulo: '', descripcion: '' });
-      return;
+/** Saldo acumulado al cierre de cada mes del presupuesto. */
+function curvaSaldo(){
+  var P=pres(),acc=0;
+  return P.meses.map(function(m,i){
+    P.filas.forEach(function(f){acc+=Number(f.valores[i])||0});
+    return {ym:m.ym,v:acc};
+  });
+}
+
+function resumenMes(){
+  var i=idxMes(),P=pres(),entra=0,sale=0;
+  if(i>=0) P.filas.forEach(function(f){
+    var v=Number(f.valores[i])||0; if(v>0)entra+=v; else sale-=v;
+  });
+  var c=curvaSaldo(), saldo=i>=0&&c[i]?c[i].v:0;
+  var delMes=(S.data.gastos||[]).filter(function(g){return ym(g.fecha)===S.mes});
+  var real=delMes.reduce(function(a,g){return a+(Number(g.monto)||0)},0);
+  return {i:i,entra:entra,sale:sale,libre:entra-sale,saldo:saldo,real:real,dif:sale-real,
+          gastos:delMes,curva:c};
+}
+
+function porCuenta(){
+  var i=idxMes(); if(i<0) return [];
+  var real={};
+  (S.data.gastos||[]).forEach(function(g){
+    if(ym(g.fecha)!==S.mes) return;
+    var k=String(g.categoria||'').trim().toUpperCase();
+    real[k]=(real[k]||0)+(Number(g.monto)||0);
+  });
+  return pres().filas.filter(function(f){return (Number(f.valores[i])||0)<0})
+    .map(function(f){
+      var plan=-(Number(f.valores[i])||0);
+      var r=real[f.cuenta.trim().toUpperCase()]||0;
+      return {cuenta:f.cuenta,plan:plan,real:r,dif:plan-r};
+    }).sort(function(a,b){return b.plan-a.plan});
+}
+
+function cuentasGasto(){
+  var c=pres().filas.filter(function(f){return f.valores.some(function(v){return v<0})})
+        .map(function(f){return f.cuenta});
+  return c.length?c:['Supermercado','Servicios','Salidas','Otros'];
+}
+
+function ocupado(persona,fecha,hora){
+  var dow=new Date(fecha+'T12:00:00').getDay(),d=S.data;
+  var r=(d.rutina||[]).some(function(x){return x.persona===persona&&Number(x.dia_semana)===dow&&
+    hora>=Number(x.hora_inicio)&&hora<Number(x.hora_fin)});
+  if(r) return true;
+  return (d.bloqueos||[]).some(function(x){return x.persona===persona&&String(x.fecha)===fecha&&
+    hora>=Number(x.hora_inicio)&&hora<Number(x.hora_fin)});
+}
+
+/** Mejores ratos libres de las próximas 2 semanas, con una hora concreta sugerida. */
+function mejoresRatos(){
+  var out=[],ahora=new Date(),base=new Date();base.setHours(12,0,0,0);
+  for(var d=0;d<14;d++){
+    var dd=new Date(base);dd.setDate(dd.getDate()+d);
+    var f=iso(dd),ini=null,dow=dd.getDay();
+    for(var k=0;k<=HORAS.length;k++){
+      var h=HORAS[k];
+      var pasada = d===0 && k<HORAS.length && h<=ahora.getHours();
+      var libre = k<HORAS.length && !pasada &&
+                  !ocupado('Diego',f,h) && !ocupado('Gabriela',f,h);
+      if(libre&&ini===null) ini=h;
+      if(!libre&&ini!==null){
+        var fin=HORAS[k-1]+1, dur=fin-ini;
+        if(dur>=2){
+          var sug = (ini<=20&&fin>21) ? 20 : (ini<=13&&fin>14) ? 13 : (ini<=17&&fin>18) ? 17 : ini;
+          var pts = Math.min(dur,6) + (dow===5||dow===6?5:0) + (sug===20?4:sug===13?2:0) - d*0.35;
+          out.push({fecha:f,ini:ini,fin:fin,sug:sug,pts:pts,dia:dd.getDate(),dow:dow});
+        }
+        ini=null;
+      }
     }
-    setBusy(true);
-    try { recargar(await api('toggleBloqueo', { bloqueo: { persona: yo, fecha, hora_inicio: hora } })); }
-    catch (e) { alert(e.message); }
-    setBusy(false);
-  };
-
-  const enviarPlan = async e => {
-    e.preventDefault();
-    if (!plan.titulo) return;
-    setBusy(true);
-    try {
-      recargar(await api('crearPlan', { plan: { ...plan, propuesto_por: yo } }));
-      setPlan(null);
-    } catch (err) { alert(err.message); }
-    setBusy(false);
-  };
-
-  const libresEstaSemana = dias.reduce((acc, d) =>
-    acc + HORAS.filter(h => !ocupado('Diego', iso(d), h) && !ocupado('Gabriela', iso(d), h)).length, 0);
-
-  const pendientes = data.planes.filter(p => p.estado === 'pendiente');
-  const proximos   = data.planes.filter(p => p.estado === 'aceptado' && String(p.fecha) >= hoyISO());
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
-          <Btn variant="ghost" className="px-3" onClick={() => setLunes(d => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; })}>‹</Btn>
-          <Btn variant="ghost" className="px-3" onClick={() => setLunes(lunesDe(new Date()))}>Hoy</Btn>
-          <Btn variant="ghost" className="px-3" onClick={() => setLunes(d => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; })}>›</Btn>
-        </div>
-        <span className="text-sm text-stone-500">
-          {lunes.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })} – {dias[6].toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}
-        </span>
-      </div>
-
-      <div className="flex rounded-xl bg-stone-100 p-1 text-sm">
-        {[['ocupado', 'Marcar mi tiempo ocupado'], ['plan', 'Proponer un plan']].map(([k, label]) => (
-          <button key={k} onClick={() => setModo(k)}
-            className={`flex-1 rounded-lg py-2 font-medium transition ${modo === k ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'}`}>
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <Card className="p-3 overflow-x-auto">
-        <div className="min-w-[560px]">
-          <div className="grid grid-cols-[38px_repeat(7,1fr)] gap-px mb-1">
-            <div />
-            {dias.map(d => (
-              <div key={d} className="text-center pb-1">
-                <p className="text-[10px] uppercase text-stone-400">{DIAS[d.getDay()]}</p>
-                <p className={`text-sm font-medium ${iso(d) === hoyISO() ? 'text-stone-900' : 'text-stone-500'}`}>{d.getDate()}</p>
-              </div>
-            ))}
-          </div>
-
-          {HORAS.map(h => (
-            <div key={h} className="grid grid-cols-[38px_repeat(7,1fr)] gap-px">
-              <div className="text-[10px] text-stone-400 pr-1.5 text-right leading-6">{hh(h)}</div>
-              {dias.map(d => {
-                const f  = iso(d);
-                const oD = ocupado('Diego', f, h);
-                const oG = ocupado('Gabriela', f, h);
-                const libre = !oD && !oG;
-                let cls = 'bg-stone-100';
-                if (oD && oG) cls = 'bg-stone-300';
-                else if (oD)  cls = 'bg-sky-200';
-                else if (oG)  cls = 'bg-rose-200';
-                else if (modo === 'plan') cls = 'bg-emerald-100 hover:bg-emerald-300 cursor-pointer';
-                else cls = 'bg-emerald-50 hover:bg-stone-200 cursor-pointer';
-                return (
-                  <button key={f} onClick={() => click(f, h)} disabled={busy || (modo === 'plan' && !libre)}
-                          title={libre ? 'Libre para los dos' : [oD && 'Diego', oG && 'Gabriela'].filter(Boolean).join(' y ') + ' ocupado'}
-                          className={`h-6 rounded-[3px] transition ${cls} ${modo === 'plan' && !libre ? 'cursor-default opacity-60' : ''}`} />
-                );
-              })}
-            </div>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-stone-100 text-xs text-stone-500">
-          <span><i className="inline-block w-3 h-3 rounded-sm bg-emerald-100 mr-1.5 align-middle"></i>Libres los dos</span>
-          <span><i className="inline-block w-3 h-3 rounded-sm bg-sky-200 mr-1.5 align-middle"></i>Diego ocupado</span>
-          <span><i className="inline-block w-3 h-3 rounded-sm bg-rose-200 mr-1.5 align-middle"></i>Gabriela ocupada</span>
-          <span><i className="inline-block w-3 h-3 rounded-sm bg-stone-300 mr-1.5 align-middle"></i>Ambos ocupados</span>
-        </div>
-      </Card>
-
-      <p className="text-sm text-stone-500 text-center">
-        {libresEstaSemana > 0
-          ? <><b className="text-stone-900">{libresEstaSemana}</b> horas libres en común esta semana</>
-          : 'Ninguna hora libre en común esta semana'}
-      </p>
-
-      {(pendientes.length > 0 || proximos.length > 0) && (
-        <Card className="p-5">
-          <p className="text-xs uppercase tracking-wide text-stone-400 mb-3">Planes</p>
-          <div className="divide-y divide-stone-100">
-            {[...proximos, ...pendientes].map(p => (
-              <div key={p.id} className="flex items-center gap-3 py-2.5">
-                <span className="text-lg">{p.estado === 'aceptado' ? '✅' : '⏳'}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm truncate">{p.titulo}</p>
-                  <p className="text-xs text-stone-400">{nombreLargo(String(p.fecha))} · {hh(p.hora)}</p>
-                </div>
-                <span className="text-xs text-stone-400 capitalize">{p.estado}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      <Card className="p-5">
-        <button onClick={() => setRutinaAbierta(!rutinaAbierta)} className="flex w-full items-center justify-between">
-          <span className="text-xs uppercase tracking-wide text-stone-400">Mi rutina semanal fija</span>
-          <span className="text-stone-400">{rutinaAbierta ? '−' : '+'}</span>
-        </button>
-        {rutinaAbierta && <EditorRutina data={data} recargar={recargar} yo={yo} />}
-      </Card>
-
-      {plan && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-stone-900/40 p-4" onClick={() => setPlan(null)}>
-          <Card className="w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
-            <p className="text-xs uppercase tracking-wide text-stone-400">Proponer plan</p>
-            <p className="text-base font-medium mt-1 mb-4 capitalize">{nombreLargo(plan.fecha)}, {hh(plan.hora)}</p>
-            <form onSubmit={enviarPlan} className="space-y-3">
-              <Input autoFocus placeholder="Ej: Cenar en el italiano" value={plan.titulo}
-                     onChange={e => setPlan({ ...plan, titulo: e.target.value })} />
-              <Input placeholder="Detalle (opcional)" value={plan.descripcion}
-                     onChange={e => setPlan({ ...plan, descripcion: e.target.value })} />
-              <div className="flex gap-2 pt-1">
-                <Btn type="button" variant="ghost" className="flex-1" onClick={() => setPlan(null)}>Cancelar</Btn>
-                <Btn className="flex-1" disabled={busy}>{busy ? 'Enviando…' : 'Enviar por correo'}</Btn>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
-    </div>
-  );
+  }
+  return out.sort(function(a,b){return b.pts-a.pts}).slice(0,3);
 }
 
-function EditorRutina({ data, recargar, yo }) {
-  const [f, setF] = useState({ dia_semana: 1, hora_inicio: 9, hora_fin: 18, tipo: 'Trabajo' });
-  const mias = data.rutina.filter(r => r.persona === yo);
+/* ---------- gráficos (SVG a mano) ---------- */
+/**
+ * Curva del saldo mes a mes. Sin preserveAspectRatio="none": eso deforma
+ * el texto y los puntos al estirar el SVG al ancho de la tarjeta.
+ */
+function sparkline(curva,activo){
+  if(curva.length<2) return '';
+  var W=300,H=34,X0=10,X1=290,TOP=16,BOT=TOP+H;
+  var vs=curva.map(function(c){return c.v});
+  var mn=Math.min.apply(null,vs.concat([0])), mx=Math.max.apply(null,vs), rg=(mx-mn)||1;
+  var pts=curva.map(function(c,i){
+    return {x:X0+i/(curva.length-1)*(X1-X0), y:BOT-((c.v-mn)/rg)*H, ym:c.ym, v:c.v};
+  });
+  var linea=pts.map(function(p,i){return (i?'L':'M')+p.x.toFixed(1)+' '+p.y.toFixed(1)}).join(' ');
+  var area=linea+' L'+pts[pts.length-1].x.toFixed(1)+' '+BOT+' L'+pts[0].x.toFixed(1)+' '+BOT+' Z';
+  var act=pts[activo]||pts[pts.length-1];
+  var anchor = activo===0?'start':activo===pts.length-1?'end':'middle';
 
-  const add = async e => {
-    e.preventDefault();
-    if (Number(f.hora_fin) <= Number(f.hora_inicio)) return alert('La hora de término debe ser posterior al inicio.');
-    recargar(await api('addRutina', { rutina: { ...f, persona: yo } }));
-  };
-
-  return (
-    <div className="mt-4 space-y-3">
-      <p className="text-xs text-stone-500">
-        Define una vez tus bloques fijos (trabajo, clases del MBA) y se repiten todas las semanas.
-        Para excepciones puntuales, marca directo en el calendario.
-      </p>
-
-      <div className="divide-y divide-stone-100">
-        {mias.map(r => (
-          <div key={r.id} className="flex items-center gap-2 py-2 text-sm">
-            <span className="w-9 font-medium text-stone-500">{DIAS[Number(r.dia_semana)]}</span>
-            <span className="tabular-nums text-stone-600">{hh(r.hora_inicio)}–{hh(r.hora_fin)}</span>
-            <span className="text-stone-400 flex-1 truncate">{r.tipo}</span>
-            <button onClick={async () => recargar(await api('delRutina', { id: r.id }))}
-                    className="text-stone-300 hover:text-red-500 px-1">×</button>
-          </div>
-        ))}
-        {mias.length === 0 && <p className="text-sm text-stone-400 py-1">Sin bloques fijos.</p>}
-      </div>
-
-      <form onSubmit={add} className="grid grid-cols-2 gap-2">
-        <Select value={f.dia_semana} onChange={e => setF({ ...f, dia_semana: e.target.value })}>
-          {[1, 2, 3, 4, 5, 6, 0].map(d => <option key={d} value={d}>{DIAS[d]}</option>)}
-        </Select>
-        <Input placeholder="Tipo" value={f.tipo} onChange={e => setF({ ...f, tipo: e.target.value })} />
-        <Select value={f.hora_inicio} onChange={e => setF({ ...f, hora_inicio: e.target.value })}>
-          {HORAS.map(h => <option key={h} value={h}>Desde {hh(h)}</option>)}
-        </Select>
-        <Select value={f.hora_fin} onChange={e => setF({ ...f, hora_fin: e.target.value })}>
-          {[...HORAS, 23].map(h => <option key={h} value={h}>Hasta {hh(h)}</option>)}
-        </Select>
-        <Btn variant="ghost" className="col-span-2">Agregar bloque</Btn>
-      </form>
-    </div>
-  );
+  return '<div class="spark"><svg viewBox="0 0 300 64" role="img" aria-label="Saldo proyectado por mes">'+
+    '<defs><linearGradient id="gsp" x1="0" y1="0" x2="0" y2="1">'+
+      '<stop offset="0" stop-color="#fff" stop-opacity=".20"/>'+
+      '<stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>'+
+    '<path d="'+area+'" fill="url(#gsp)"/>'+
+    '<path d="'+linea+'" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2" '+
+      'stroke-linecap="round" stroke-linejoin="round"/>'+
+    pts.map(function(p,i){
+      return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+(i===activo?4:2.2)+'" '+
+        'fill="'+(i===activo?'#fff':'rgba(255,255,255,.4)')+'"/>';
+    }).join('')+
+    '<text x="'+act.x.toFixed(1)+'" y="11" fill="#fff" font-size="11" font-weight="600" '+
+      'text-anchor="'+anchor+'">'+corto(act.v)+'</text>'+
+    pts.map(function(p,i){
+      return '<text x="'+p.x.toFixed(1)+'" y="61" fill="rgba(255,255,255,'+(i===activo?'.8':'.35')+')" '+
+        'font-size="8.5" text-anchor="middle">'+mesCorto(p.ym)+'</text>';
+    }).join('')+
+    '</svg></div>';
 }
 
-// ═════════════ APP ═════════════
-function App() {
-  const [yo, setYo]       = useState(() => sessionStorageSafe('persona'));
-  const [data, setData]   = useState(null);
-  const [vista, setVista] = useState('gastos');
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (!yo) return;
-    api('data').then(setData).catch(e => setError(e.message));
-  }, [yo]);
-
-  if (!yo) return <Login onEntrar={p => { setYo(p); try { sessionStorage.setItem('persona', p); } catch (e) {} }} />;
-
-  if (error) return (
-    <div className="p-8 text-center text-sm">
-      <p className="text-red-600 font-medium mb-2">No se pudo conectar</p>
-      <p className="text-stone-500">{error}</p>
-      <p className="text-stone-400 mt-4 text-xs">Revisa WEB_APP_URL y que el token coincida con Codigo.gs</p>
-    </div>
-  );
-
-  if (!data) return <div className="p-16 text-center text-sm text-stone-400">Cargando…</div>;
-
-  return (
-    <div className="mx-auto max-w-2xl px-4 py-5 pb-24">
-      <header className="flex items-center justify-between mb-5">
-        <h1 className="text-lg font-semibold tracking-tight">Casa &amp; Citas</h1>
-        <span className="text-sm text-stone-400">
-          <span className={`inline-block w-2 h-2 rounded-full mr-1.5 ${COLOR[yo]}`}></span>{yo}
-        </span>
-      </header>
-
-      {vista === 'gastos'
-        ? <Gastos data={data} recargar={setData} yo={yo} />
-        : <Calendario data={data} recargar={setData} yo={yo} />}
-
-      <nav className="fixed bottom-0 inset-x-0 border-t border-stone-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto max-w-2xl grid grid-cols-2">
-          {[['gastos', '💰', 'Gastos'], ['calendario', '📅', 'Calendario']].map(([k, ico, label]) => (
-            <button key={k} onClick={() => setVista(k)}
-              className={`py-3 text-xs font-medium transition ${vista === k ? 'text-stone-900' : 'text-stone-400'}`}>
-              <span className="block text-lg leading-tight">{ico}</span>{label}
-            </button>
-          ))}
-        </div>
-      </nav>
-    </div>
-  );
+function anillo(pct,estado){
+  var r=48,C=2*Math.PI*r, off=C*(1-Math.min(pct,100)/100);
+  return '<svg viewBox="0 0 120 120">'+
+    '<circle class="rbg" cx="60" cy="60" r="'+r+'"/>'+
+    '<circle class="rfg '+estado+'" cx="60" cy="60" r="'+r+'" '+
+      'stroke-dasharray="'+C.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'"/>'+
+    '<text class="pc" x="60" y="58" text-anchor="middle">'+Math.round(pct)+'%</text>'+
+    '<text class="pl" x="60" y="74" text-anchor="middle">DEL PLAN</text></svg>';
 }
 
-function sessionStorageSafe(k) {
-  try { return sessionStorage.getItem(k); } catch (e) { return null; }
+/* ---------- render ---------- */
+function render(){
+  if(!S.yo) return vistaLogin();
+  if(!S.data) return void($('#app').innerHTML=
+    '<div class="wrap"><p class="sync" style="padding:70px 0">Cargando…</p></div>');
+  if(!S.mes){var m=mesesDisponibles();S.mes=m.indexOf(hoy().slice(0,7))>=0?hoy().slice(0,7):m[m.length-1]}
+
+  $('#app').innerHTML =
+    '<div class="wrap">'+
+      '<header><h1>Casa &amp; Citas</h1>'+
+      '<span class="av"><i class="'+S.yo+'">'+S.yo.charAt(0)+'</i>'+S.yo+'</span></header>'+
+      (S.offline?'<p class="sync off">⚠ Sin conexión — estás viendo lo último guardado</p>'
+       :S.sync?'<p class="sync">actualizando…</p>':'')+
+      (S.vista==='plata'?vistaPlata():vistaCitas())+
+    '</div>'+
+    '<nav><div class="inner">'+navBtn('plata','💰','Plata')+navBtn('citas','💕','Citas')+'</div></nav>'+
+    (S.plan?overlayPlan():'');
+}
+function navBtn(k,e,t){
+  return '<button data-nav="'+k+'" class="'+(S.vista===k?'on':'')+'"><span class="e">'+e+'</span>'+t+'</button>';
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+/* ========== VISTA PLATA ========== */
+function vistaPlata(){
+  var R=resumenMes(), h='';
+
+  h+='<div class="meses">'+mesesDisponibles().map(function(m){
+    return '<button class="mes '+(m===S.mes?'on':'')+'" data-mes="'+m+'">'+mesCorto(m)+'</button>';
+  }).join('')+'</div>';
+
+  if(R.i<0){
+    h+='<div class="card p"><p class="vacio">Todavía no hay presupuesto para <b>'+nombreMes(S.mes)+
+       '</b>. Agrega esa columna en la pestaña <b>Presupuesto</b> de la planilla y aparece aquí solo.</p></div>';
+  }else{
+    /* Hero */
+    h+='<div class="hero">'+
+       '<p class="lbl">Deberíamos tener</p>'+
+       '<p class="big'+(R.saldo<0?' neg':'')+' num">'+clp(R.saldo)+'</p>'+
+       '<p class="sub">en la cuenta al terminar '+nombreMes(S.mes)+'</p>'+
+       '<span class="chip '+(R.libre>=0?'up':'dn')+'">'+(R.libre>=0?'▲':'▼')+' '+
+         clp(Math.abs(R.libre))+' este mes</span>'+
+       sparkline(R.curva,R.i)+
+       '</div>';
+
+    /* Tres números */
+    h+='<div class="card p">'+
+       '<p class="tit">El mes en tres números</p>'+
+       '<div class="flujo">'+
+         fila('in','⬇️','Entra','sueldos y depósitos',R.entra,'in')+
+         fila('out','⬆️','Hay que pagar','cuentas fijas del mes',R.sale,'out')+
+         fila('eq','🎯','Queda libre','si se paga todo lo de arriba',R.libre,R.libre<0?'neg':'in',1)+
+       '</div>'+
+       '<p class="expl">Esto viene de la planilla: es el <b>plan</b> del mes, no lo que realmente se ha gastado.</p>'+
+       '</div>';
+
+    /* Cómo vamos */
+    h+='<div class="card p"><p class="tit">¿Cómo vamos este mes?</p>'+comoVamos(R)+'</div>';
+
+    var C=porCuenta();
+    if(C.length) h+='<div class="card p"><p class="tit">En qué se va la plata</p>'+
+      C.map(cuentaHTML).join('')+'</div>';
+  }
+
+  h+=entreUstedes(R);
+
+  h+='<div class="card p"><p class="tit">Lo que hemos anotado</p>'+
+     (R.gastos.length
+       ? R.gastos.slice().sort(function(a,b){return String(b.fecha).localeCompare(String(a.fecha))})
+           .map(movHTML).join('')
+       : '<p class="vacio">Nada anotado en '+nombreMes(S.mes)+' todavía.</p>')+
+     '</div>';
+
+  h+= S.form ? formGasto() : '<button class="btn" data-abrir="form">＋ Anotar un gasto</button>';
+  return h;
+}
+
+/**
+ * Quién puso cuánto y cuánto falta para quedar a la par.
+ * Es la pregunta que aparece sola cuando dos personas pagan cuentas comunes.
+ */
+function entreUstedes(R){
+  var m={Diego:0,Gabriela:0};
+  R.gastos.forEach(function(g){
+    var p = g.pagado_por==='Gabriela' ? 'Gabriela' : 'Diego';
+    m[p] += Number(g.monto)||0;
+  });
+  var tot=m.Diego+m.Gabriela;
+  if(!tot) return '';
+
+  var dif=m.Diego-tot/2;            // >0: Diego puso de más
+  var msg, em, cls;
+  if(Math.abs(dif)<1000){ cls='ok'; em='🤝'; msg='Van parejos este mes.'; }
+  else if(dif>0){ cls='neutro'; em='↔️';
+    msg='Para quedar a la par, <b>Gabriela</b> le debe <b>'+clp(dif)+'</b> a Diego.'; }
+  else { cls='neutro'; em='↔️';
+    msg='Para quedar a la par, <b>Diego</b> le debe <b>'+clp(-dif)+'</b> a Gabriela.'; }
+
+  return '<div class="card p"><p class="tit">Quién puso cuánto</p>'+
+    ['Diego','Gabriela'].map(function(p){
+      return '<div class="saldo2"><span class="who '+p+'">'+p.charAt(0)+'</span>'+
+        '<span class="n">'+p+'</span><span class="v num">'+clp(m[p])+'</span></div>';
+    }).join('')+
+    '<div class="verdict '+cls+'" style="margin-top:14px"><span class="em">'+em+'</span>'+
+    '<div>'+msg+'</div></div>'+
+    '<p class="expl">Cuenta solo los gastos anotados en la app, no las cuentas fijas de la planilla.</p>'+
+    '</div>';
+}
+
+function fila(cls,em,t,sub,v,vc,tot){
+  return '<div class="fila'+(tot?' total':'')+'"><span class="ic '+cls+'">'+em+'</span>'+
+    '<span class="tx">'+t+'<small>'+sub+'</small></span>'+
+    '<span class="vl '+vc+' num">'+clp(v)+'</span></div>';
+}
+
+function comoVamos(R){
+  if(!R.real){
+    return '<div class="verdict neutro"><span class="em">📝</span><div>Todavía no anotan gastos de '+
+      nombreMes(S.mes)+'. Anota uno abajo y aquí van a ver si se están pasando o no.</div></div>';
+  }
+  var pct = R.sale ? R.real/R.sale*100 : 0;
+  var esteMes = S.mes===hoy().slice(0,7);
+  var d = new Date().getDate(), tot = diasDelMes(S.mes), esperado = R.sale*d/tot;
+  var mal = R.dif<0, alto = esteMes && !mal && R.real>esperado;
+  var estado = mal?'mal':alto?'mid':'ok';
+
+  var h='<div class="anillo">'+anillo(pct,estado)+
+    '<div class="de">Llevan gastado <b class="num">'+clp(R.real)+'</b><br>'+
+    'de <span class="num">'+clp(R.sale)+'</span> presupuestados</div></div>';
+
+  var msg,em;
+  if(mal){ em='😬'; msg='Se pasaron por <b>'+clp(-R.dif)+'</b>. Esa plata sale del ahorro del mes.'; }
+  else if(esteMes){
+    em = alto?'⚠️':'👍';
+    msg='Van en el día '+d+' de '+tot+'. Al ritmo del mes deberían llevar cerca de <b>'+clp(esperado)+
+        '</b>. '+(alto?'Van algo arriba, ojo con lo que queda.':'Van bien.');
+  }
+  else { em='🎉'; msg='Gastaron <b>'+clp(R.dif)+'</b> menos de lo presupuestado. Eso se suma al ahorro.'; }
+
+  return h+'<div class="verdict '+estado+'"><span class="em">'+em+'</span><div>'+msg+'</div></div>';
+}
+
+function cuentaHTML(c){
+  var pct=c.plan?Math.min(100,c.real/c.plan*100):0, mal=c.dif<0;
+  var estado = mal?'mal':pct>85?'mid':'ok';
+  var nota = !c.real ? 'Sin gastos anotados todavía'
+    : mal ? 'Se pasaron por '+clp(-c.dif)
+    : 'Queda '+clp(c.dif)+' disponible';
+  return '<div class="cta"><span class="ic eq">'+icono(c.cuenta)+'</span><span class="in">'+
+    '<span class="top"><span class="nm">'+esc(c.cuenta)+'</span>'+
+    '<span class="mt num"><b>'+clp(c.real)+'</b> / '+clp(c.plan)+'</span></span>'+
+    '<span class="bar"><i class="'+estado+'" style="width:'+pct+'%"></i></span>'+
+    '<span class="nota'+(mal?' mal':'')+'">'+nota+'</span></span></div>';
+}
+
+function movHTML(g){
+  var f=String(g.fecha), p=g.pagado_por==='Gabriela'?'Gabriela':'Diego';
+  return '<div class="mov"><span class="who '+p+'">'+p.charAt(0)+'</span>'+
+    '<span class="in"><p>'+esc(g.descripcion)+'</p>'+
+    '<small>'+f.slice(8,10)+'/'+f.slice(5,7)+' · '+esc(g.categoria)+'</small></span>'+
+    '<span class="mn num">'+clp(g.monto)+'</span>'+
+    '<button class="x" data-borrar="'+g.id+'">×</button></div>';
+}
+
+function formGasto(){
+  return '<div class="card p"><p class="tit">Anotar un gasto</p><form id="fg">'+
+    '<div class="fld"><label>¿En qué se gastó?</label>'+
+      '<input name="descripcion" placeholder="Ej: feria del sábado" required></div>'+
+    '<div class="fld"><label>¿Cuánto?</label>'+
+      '<input name="monto" type="number" inputmode="numeric" placeholder="15000" required></div>'+
+    '<div class="row2">'+
+      '<div class="fld"><label>Categoría</label><select name="categoria">'+
+        cuentasGasto().map(function(c){return '<option>'+esc(c)+'</option>'}).join('')+
+      '</select></div>'+
+      '<div class="fld"><label>¿Quién pagó?</label><select name="pagado_por">'+
+        ['Diego','Gabriela'].map(function(p){
+          return '<option'+(p===S.yo?' selected':'')+'>'+p+'</option>'}).join('')+
+      '</select></div></div>'+
+    '<div class="fld"><label>¿Cuándo?</label><input name="fecha" type="date" value="'+hoy()+'"></div>'+
+    '<div class="row2"><button type="button" class="btn sec" data-cerrar="form">Cancelar</button>'+
+    '<button class="btn"'+(S.busy?' disabled':'')+'>'+(S.busy?'Guardando…':'Guardar')+'</button></div>'+
+    '</form></div>';
+}
+
+/* ========== VISTA CITAS ========== */
+function vistaCitas(){
+  var h='',R=mejoresRatos();
+
+  h+='<div class="card p"><p class="tit">Mejores ratos para salir</p>'+
+     (R.length? R.map(function(r){
+        return '<div class="sug"><span class="cal"><b>'+r.dia+'</b><span>'+DIAS[r.dow]+'</span></span>'+
+          '<span class="in"><p>'+capital(DIAS_L[r.dow])+' a las '+hh(r.sug)+'</p>'+
+          '<small>Libres de '+hh(r.ini)+' a '+hh(r.fin)+'</small></span>'+
+          '<button class="go" data-invitar="'+r.fecha+'|'+r.sug+'">Invitar</button></div>';
+      }).join('')
+      : '<p class="vacio">No hay ratos largos libres en las próximas dos semanas. Revisa tus horarios de siempre más abajo.</p>')+
+     '</div>';
+
+  var pend=(S.data.planes||[]).filter(function(p){return p.estado==='pendiente'});
+  var prox=(S.data.planes||[]).filter(function(p){return p.estado==='aceptado'&&String(p.fecha)>=hoy()});
+  if(pend.length||prox.length){
+    h+='<div class="card p"><p class="tit">Nuestros planes</p>'+
+      prox.concat(pend).map(function(p){
+        return '<div class="plan"><span class="em">'+(p.estado==='aceptado'?'✅':'⏳')+'</span>'+
+          '<span class="in"><p>'+esc(p.titulo)+'</p><small>'+capital(fechaLarga(String(p.fecha)))+
+          ' · '+hh(p.hora)+'</small></span>'+
+          '<span class="pill'+(p.estado==='aceptado'?' ok':'')+'">'+
+          (p.estado==='aceptado'?'Confirmado':'Esperando')+'</span></div>';
+      }).join('')+'</div>';
+  }
+
+  var L=S.semana, dias=[];
+  for(var i=0;i<7;i++){var d=new Date(L);d.setDate(d.getDate()+i);dias.push(d)}
+
+  h+='<div class="card p">'+
+     '<div class="modos">'+
+       '<button data-modo="ocupado" class="'+(S.modo==='ocupado'?'on':'')+'">Cuándo no puedo</button>'+
+       '<button data-modo="plan" class="'+(S.modo==='plan'?'on':'')+'">Invitar a salir</button>'+
+     '</div>'+
+     '<p class="expl" style="margin:0 0 15px">'+
+       (S.modo==='ocupado'
+         ? 'Toca las horas en que estás ocupada/o. Para un día entero, toca el <b>número del día</b>.'
+         : 'Toca cualquier hora <b>verde</b> — esas son las que están libres para los dos.')+
+     '</p>'+
+     '<div class="navsem"><button data-sem="-1">‹</button>'+
+       '<span class="s">'+dias[0].getDate()+' '+MES_L[dias[0].getMonth()].slice(0,3)+' – '+
+         dias[6].getDate()+' '+MES_L[dias[6].getMonth()].slice(0,3)+'</span>'+
+       '<button data-sem="1">›</button></div>'+
+     '<div class="grid"><div></div>'+
+       dias.map(function(d){
+         var f=iso(d), lleno=HORAS.every(function(hr){return ocupado(S.yo,f,hr)});
+         return '<button class="gh'+(f===hoy()?' hoy':'')+(lleno?' lleno':'')+'" data-dia="'+f+'" '+
+                'title="Marcar o liberar el día entero"><span>'+DIAS[d.getDay()]+
+                '</span><b>'+d.getDate()+'</b></button>';
+       }).join('')+
+       HORAS.map(function(hr){
+         return '<div class="gt">'+hh(hr)+'</div>'+dias.map(function(d){
+           var f=iso(d),oD=ocupado('Diego',f,hr),oG=ocupado('Gabriela',f,hr),c='cel ';
+           c += (oD&&oG)?'dg':oD?'d':oG?'g':'libre';
+           return '<button class="'+c+'" data-cel="'+f+'|'+hr+'"></button>';
+         }).join('');
+       }).join('')+
+     '</div>'+
+     '<div class="leg">'+
+       '<span><i style="background:var(--green-bg)"></i>Libres los dos</span>'+
+       '<span><i style="background:var(--diego-bg)"></i>Diego ocupado</span>'+
+       '<span><i style="background:var(--gabi-bg)"></i>Gabriela ocupada</span>'+
+       '<span><i style="background:var(--line)"></i>Los dos ocupados</span>'+
+     '</div></div>';
+
+  h+='<div class="card p"><button class="acc" data-acc="rutina">'+
+     '<span class="tit" style="margin:0">Mis horarios de siempre</span>'+
+     '<span style="color:var(--faint);font-size:20px;line-height:1">'+(S.rutina?'−':'+')+'</span></button>'+
+     (S.rutina?rutinaHTML():'')+'</div>';
+  return h;
+}
+
+function rutinaHTML(){
+  var mias=(S.data.rutina||[]).filter(function(r){return r.persona===S.yo});
+  return '<p class="expl">Trabajo, clases, gimnasio: lo que se repite todas las semanas. Se pone una vez '+
+    'y queda para siempre. Para algo puntual, marca directo en el calendario.</p><div style="margin-top:14px">'+
+    (mias.length? mias.map(function(r){
+      return '<div class="rut"><span class="d">'+DIAS[Number(r.dia_semana)]+'</span>'+
+        '<span class="h num">'+hh(r.hora_inicio)+'–'+hh(r.hora_fin)+'</span>'+
+        '<span class="t">'+esc(r.tipo)+'</span>'+
+        '<button class="x" data-delrut="'+r.id+'" style="color:var(--faint);font-size:18px;padding:6px 2px">×</button></div>';
+    }).join('') : '<p class="vacio">Sin horarios fijos todavía.</p>')+
+    '</div><form id="fr" style="margin-top:14px">'+
+    '<div class="row2"><div class="fld"><label>Día</label><select name="dia_semana">'+
+      [1,2,3,4,5,6,0].map(function(d){return '<option value="'+d+'">'+DIAS[d]+'</option>'}).join('')+
+    '</select></div><div class="fld"><label>¿Qué es?</label>'+
+      '<input name="tipo" placeholder="Trabajo" value="Trabajo"></div></div>'+
+    '<div class="row2"><div class="fld"><label>Desde</label><select name="hora_inicio">'+
+      HORAS.map(function(h){return '<option value="'+h+'"'+(h===9?' selected':'')+'>'+hh(h)+'</option>'}).join('')+
+    '</select></div><div class="fld"><label>Hasta</label><select name="hora_fin">'+
+      HORAS.concat([23]).map(function(h){return '<option value="'+h+'"'+(h===18?' selected':'')+'>'+hh(h)+'</option>'}).join('')+
+    '</select></div></div>'+
+    '<button class="btn sec">Agregar horario</button></form>';
+}
+
+function overlayPlan(){
+  var p=S.plan, otra=(S.yo==='Diego'?'Gabriela':'Diego');
+  return '<div class="ov" data-ov="1"><div class="card p">'+
+    '<p class="tit">Invitar a salir</p>'+
+    '<p style="font-size:18px;font-weight:650;letter-spacing:-.02em;margin-bottom:2px">'+
+      capital(fechaLarga(p.fecha))+'</p>'+
+    '<p style="font-size:14px;color:var(--muted);margin-bottom:17px">a las '+hh(p.hora)+'</p>'+
+    '<form id="fp">'+
+    '<div class="fld"><label>¿Qué hacemos?</label>'+
+      '<input name="titulo" placeholder="Ej: cenar en el italiano" required autofocus></div>'+
+    '<div class="fld"><label>Algo más que agregar (opcional)</label>'+
+      '<input name="descripcion" placeholder="Yo reservo"></div>'+
+    '<div class="row2"><button type="button" class="btn sec" data-cerrar="plan">Cancelar</button>'+
+    '<button class="btn"'+(S.busy?' disabled':'')+'>'+(S.busy?'Enviando…':'Enviar')+'</button></div></form>'+
+    '<p class="expl">Le llega un correo a '+otra+' con botones para aceptar o rechazar.</p>'+
+    '</div></div>';
+}
+
+/* ========== LOGIN ========== */
+function vistaLogin(){
+  $('#app').innerHTML='<div class="login"><div class="bx">'+
+    '<div class="em">🏡</div><h1>Casa &amp; Citas</h1><p>Ingresa tu clave</p>'+
+    '<input id="pin" type="password" inputmode="text" autocomplete="current-password" placeholder="••••••">'+
+    '<p class="msg" id="msg"></p><button class="btn" id="entrar">Entrar</button></div></div>';
+  var i=$('#pin'); i.focus();
+  function probar(){
+    var v=i.value;
+    if(PINS[v]){S.yo=PINS[v];guardaLocal('yo',S.yo);arranca();return}
+    i.classList.add('err'); $('#msg').textContent='Esa clave no es';
+    setTimeout(function(){i.value='';i.classList.remove('err');$('#msg').textContent=''},900);
+  }
+  i.addEventListener('input',function(){if(PINS[i.value])probar()});
+  i.addEventListener('keydown',function(e){if(e.key==='Enter')probar()});
+  $('#entrar').addEventListener('click',probar);
+}
+
+/* ========== EVENTOS ========== */
+document.addEventListener('click',function(e){
+  var t=e.target.closest('[data-nav],[data-mes],[data-modo],[data-sem],[data-cel],[data-abrir],'+
+        '[data-cerrar],[data-borrar],[data-acc],[data-invitar],[data-delrut],[data-ov],[data-dia]');
+  if(!t) return;
+  var d=t.dataset;
+
+  if(d.nav){S.vista=d.nav;render();scrollTo(0,0)}
+  else if(d.mes){S.mes=d.mes;render()}
+  else if(d.modo){S.modo=d.modo;render()}
+  else if(d.sem){S.semana.setDate(S.semana.getDate()+7*Number(d.sem));render()}
+  else if(d.abrir){S.form=true;render()}
+  else if(d.cerrar==='form'){S.form=false;render()}
+  else if(d.cerrar==='plan'||d.ov){S.plan=null;render()}
+  else if(d.acc){S.rutina=!S.rutina;render()}
+  else if(d.invitar){var q=d.invitar.split('|');S.plan={fecha:q[0],hora:+q[1]};render()}
+  else if(d.borrar){ if(confirm('¿Borrar este gasto?')) conSync(api('delGasto',{id:d.borrar})) }
+  else if(d.dia){
+    if(S.modo!=='ocupado'){ S.modo='ocupado'; render(); return }
+    var lleno=HORAS.every(function(hr){return ocupado(S.yo,d.dia,hr)});
+    conSync(api('setDia',{dia:{persona:S.yo,fecha:d.dia,ocupar:!lleno}}));
+  }
+  else if(d.delrut){ conSync(api('delRutina',{id:d.delrut})) }
+  else if(d.cel){
+    var c=d.cel.split('|'),f=c[0],hr=+c[1];
+    if(S.modo==='plan'){
+      if(ocupado('Diego',f,hr)||ocupado('Gabriela',f,hr))return;
+      S.plan={fecha:f,hora:hr};render();
+    }else{
+      t.className='cel '+(t.classList.contains('libre')?(S.yo==='Diego'?'d':'g'):'libre');
+      conSync(api('toggleBloqueo',{bloqueo:{persona:S.yo,fecha:f,hora_inicio:hr}}),true);
+    }
+  }
+});
+
+document.addEventListener('submit',function(e){
+  e.preventDefault();
+  var f=e.target,v={};
+  Array.prototype.forEach.call(f.elements,function(el){if(el.name)v[el.name]=el.value});
+
+  if(f.id==='fg'){
+    S.busy=true;render();
+    conSync(api('addGasto',{gasto:v}).then(function(d){S.form=false;S.busy=false;return d}),
+      false,function(){S.busy=false;render()});
+  }else if(f.id==='fr'){
+    if(+v.hora_fin<=+v.hora_inicio){alert('La hora de término tiene que ser después del inicio.');return}
+    v.persona=S.yo; conSync(api('addRutina',{rutina:v}));
+  }else if(f.id==='fp'){
+    S.busy=true;render();
+    v.fecha=S.plan.fecha; v.hora=S.plan.hora; v.propuesto_por=S.yo;
+    conSync(api('crearPlan',{plan:v}).then(function(d){S.plan=null;S.busy=false;return d}),
+      false,function(){S.busy=false;render()});
+  }
+});
+
+function conSync(p,silencioso,onErr){
+  if(!silencioso){S.sync=true;render()}
+  p.then(function(){S.sync=false;render()})
+   .catch(function(err){
+     S.sync=false; if(onErr)onErr(); else render();
+     alert('No se pudo guardar: '+err.message);
+   });
+}
+
+/* ========== ARRANQUE ========== */
+function arranca(){
+  var c=leeLocal('datos');
+  if(c) S.data=c;
+  S.sync=true; render();
+  api('data').then(function(){S.sync=false;render()})
+    .catch(function(err){
+      S.sync=false;
+      if(!S.data) $('#app').innerHTML='<div class="wrap"><div class="card p">'+
+        '<p style="color:var(--red);font-weight:650;margin-bottom:6px">No se pudo conectar</p>'+
+        '<p style="font-size:14px;color:var(--muted)">'+esc(err.message)+'</p></div></div>';
+      else render();
+    });
+}
+
+S.yo=leeLocal('yo');
+if(S.yo&&Object.keys(PINS).some(function(k){return PINS[k]===S.yo})) arranca(); else vistaLogin();
 </script>
 </body>
 </html>

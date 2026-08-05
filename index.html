@@ -32,7 +32,7 @@ const { useState, useEffect, useMemo, useCallback } = React;
    1. Pega aquí la URL del Web App de Apps Script
    2. Usa el MISMO token que pusiste en Codigo.gs
    3. Cambia los PIN                                */
-const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyZul-rE1Evzlh6XufFGNwQcKr-qwYn5kgeb1y7BVcdviAK_lM6lJYsYtJ0cQZOCuyE/exec';
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx9bx3PAQLqPq8bY9YaEhq43xKZryh8pxTC1cRUaC5dLfLTi-f4IYLOFMX0rkAbQ_Gj/exec';
 const TOKEN       = 'casa-gd-2026-x7k9m2p';
 // Claves de acceso: cualquier largo, letras y/o números. Deben ser distintas entre sí.
 const PINS        = { '070990': 'Diego', '135790': 'Gabriela' };
@@ -144,28 +144,65 @@ function Login({ onEntrar }) {
 
 // ═════════════ GASTOS ═════════════
 function Gastos({ data, recargar, yo }) {
-  const [mes, setMes]   = useState(hoyISO().slice(0, 7));
-  const [form, setForm] = useState({ fecha: hoyISO(), categoria: CATEGORIAS[0], descripcion: '', monto: '', pagado_por: yo });
+  const pres = data.presupuesto || { meses: [], filas: [] };
+
+  // Cuentas de gasto del presupuesto = categorías disponibles al registrar
+  const cuentasGasto = useMemo(() =>
+    pres.filas.filter(f => f.valores.some(v => v < 0)).map(f => f.cuenta),
+    [pres.filas]);
+  const categorias = cuentasGasto.length ? cuentasGasto : CATEGORIAS;
+
+  const mesesDisponibles = useMemo(() => {
+    const s = new Set(pres.meses.map(m => m.ym));
+    data.gastos.forEach(g => s.add(mesDe(g.fecha)));
+    s.add(hoyISO().slice(0, 7));
+    return [...s].filter(Boolean).sort();
+  }, [pres.meses, data.gastos]);
+
+  const [mes, setMes]   = useState(() =>
+    mesesDisponibles.includes(hoyISO().slice(0, 7)) ? hoyISO().slice(0, 7) : mesesDisponibles[0]);
+  const [form, setForm] = useState({ fecha: hoyISO(), categoria: categorias[0], descripcion: '', monto: '', pagado_por: yo });
   const [abierto, setAbierto] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const delMes  = useMemo(() => data.gastos.filter(g => mesDe(g.fecha) === mes), [data.gastos, mes]);
-  const delPrev = useMemo(() => data.gastos.filter(g => mesDe(g.fecha) === mesAnterior(mes)), [data.gastos, mes]);
+  const idx = pres.meses.findIndex(m => m.ym === mes);
+  const val = (fila, i) => Number(fila.valores[i] || 0);
 
-  const total  = delMes.reduce((s, g) => s + Number(g.monto || 0), 0);
-  const prev   = delPrev.reduce((s, g) => s + Number(g.monto || 0), 0);
-  const delta  = prev ? ((total - prev) / prev) * 100 : 0;
+  // ---- Plan del mes según la planilla ----
+  const entra   = idx < 0 ? 0 : pres.filas.reduce((s, f) => s + Math.max(0, val(f, idx)), 0);
+  const aPagar  = idx < 0 ? 0 : pres.filas.reduce((s, f) => s + Math.min(0, val(f, idx)), 0) * -1;
+  const netoPlan = entra - aPagar;
 
-  const porCat = useMemo(() => {
+  // Saldo acumulado proyectado al cierre de ese mes (la fila "Total" de tu planilla)
+  const saldo = idx < 0 ? 0 :
+    pres.meses.slice(0, idx + 1).reduce((acc, _, i) =>
+      acc + pres.filas.reduce((s, f) => s + val(f, i), 0), 0);
+
+  // ---- Real del mes según lo registrado ----
+  const delMes = useMemo(() => data.gastos.filter(g => mesDe(g.fecha) === mes), [data.gastos, mes]);
+  const realGastado = delMes.reduce((s, g) => s + Number(g.monto || 0), 0);
+  const diferencia = aPagar - realGastado;   // + ahorro, − sobregasto
+
+  const realPorCuenta = useMemo(() => {
     const m = {};
-    delMes.forEach(g => { m[g.categoria] = (m[g.categoria] || 0) + Number(g.monto || 0); });
-    return Object.entries(m).sort((a, b) => b[1] - a[1]);
+    delMes.forEach(g => {
+      const k = String(g.categoria || '').trim().toUpperCase();
+      m[k] = (m[k] || 0) + Number(g.monto || 0);
+    });
+    return m;
   }, [delMes]);
 
-  const presupuesto = c => {
-    const p = data.presupuestos.find(x => x.categoria === c);
-    return p ? Number(p.monto_mensual) : 0;
-  };
+  const comparativo = useMemo(() => {
+    if (idx < 0) return [];
+    return pres.filas
+      .filter(f => val(f, idx) < 0)
+      .map(f => {
+        const plan = -val(f, idx);
+        const real = realPorCuenta[f.cuenta.trim().toUpperCase()] || 0;
+        return { cuenta: f.cuenta, plan, real, dif: plan - real };
+      })
+      .sort((a, b) => b.plan - a.plan);
+  }, [pres.filas, idx, realPorCuenta]);
 
   const porPersona = useMemo(() => {
     const m = {};
@@ -185,23 +222,17 @@ function Gastos({ data, recargar, yo }) {
     setBusy(false);
   };
 
-  const meses = useMemo(() => {
-    const s = new Set(data.gastos.map(g => mesDe(g.fecha)));
-    s.add(hoyISO().slice(0, 7));
-    return [...s].filter(Boolean).sort().reverse();
-  }, [data.gastos]);
-
-  const max = Math.max(...porCat.map(c => c[1]), 1);
+  const etiquetaMes = ym => {
+    const p = pres.meses.find(m => m.ym === ym);
+    if (p) return p.label.charAt(0) + p.label.slice(1).toLowerCase() + ' ' + ym.slice(0, 4);
+    return new Date(ym + '-02').toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Select value={mes} onChange={e => setMes(e.target.value)}>
-          {meses.map(m => (
-            <option key={m} value={m}>
-              {new Date(m + '-02').toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })}
-            </option>
-          ))}
+          {mesesDisponibles.map(m => <option key={m} value={m}>{etiquetaMes(m)}</option>)}
         </Select>
         <Btn onClick={() => setAbierto(!abierto)} className="shrink-0">{abierto ? 'Cerrar' : '+ Gasto'}</Btn>
       </div>
@@ -216,7 +247,7 @@ function Gastos({ data, recargar, yo }) {
             <Input placeholder="Descripción" value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} />
             <div className="grid grid-cols-2 gap-3">
               <Select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })}>
-                {CATEGORIAS.map(c => <option key={c}>{c}</option>)}
+                {categorias.map(c => <option key={c}>{c}</option>)}
               </Select>
               <Select value={form.pagado_por} onChange={e => setForm({ ...form, pagado_por: e.target.value })}>
                 <option>Diego</option><option>Gabriela</option>
@@ -227,52 +258,84 @@ function Gastos({ data, recargar, yo }) {
         </Card>
       )}
 
-      <Card className="p-5">
-        <p className="text-xs uppercase tracking-wide text-stone-400">Total del mes</p>
-        <p className="text-3xl font-semibold tracking-tight mt-1">{clp(total)}</p>
-        {prev > 0 && (
-          <p className={`text-sm mt-1.5 ${delta > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-            {delta > 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(0)}% vs mes anterior ({clp(prev)})
-          </p>
-        )}
-        {Object.keys(porPersona).length > 1 && (
-          <div className="flex gap-4 mt-4 pt-4 border-t border-stone-100 text-sm">
-            {Object.entries(porPersona).map(([p, v]) => (
-              <div key={p}>
-                <span className={`inline-block w-2 h-2 rounded-full mr-1.5 ${COLOR[p] || 'bg-stone-400'}`}></span>
-                <span className="text-stone-500">{p}</span> <span className="font-medium">{clp(v)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
+      {idx < 0 && (
+        <Card className="p-5 text-sm text-stone-500">
+          No hay presupuesto cargado para este mes. Agrega la columna en la pestaña
+          <b className="text-stone-700"> Presupuesto</b> de la planilla.
+        </Card>
+      )}
 
-      <Card className="p-5">
-        <p className="text-xs uppercase tracking-wide text-stone-400 mb-4">Por categoría</p>
-        {porCat.length === 0 && <p className="text-sm text-stone-400">Sin gastos este mes.</p>}
-        <div className="space-y-3.5">
-          {porCat.map(([cat, monto]) => {
-            const pres = presupuesto(cat);
-            const excede = pres > 0 && monto > pres;
-            return (
-              <div key={cat}>
-                <div className="flex justify-between text-sm mb-1.5">
-                  <span className={excede ? 'text-red-600 font-medium' : 'text-stone-700'}>
-                    {cat} {excede && '⚠'}
-                  </span>
-                  <span className="tabular-nums text-stone-600">
-                    {clp(monto)}{pres > 0 && <span className="text-stone-300"> / {clp(pres)}</span>}
-                  </span>
-                </div>
-                <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${excede ? 'bg-red-500' : 'bg-stone-800'}`}
-                       style={{ width: `${(monto / max) * 100}%` }} />
-                </div>
+      {idx >= 0 && (
+        <>
+          <Card className="p-5">
+            <p className="text-xs uppercase tracking-wide text-stone-400">Plata en la cuenta</p>
+            <p className={`text-3xl font-semibold tracking-tight mt-1 ${saldo < 0 ? 'text-red-600' : ''}`}>{clp(saldo)}</p>
+            <p className="text-xs text-stone-400 mt-1">Proyectado al cierre de {etiquetaMes(mes)}</p>
+
+            <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-stone-100">
+              <div>
+                <p className="text-xs text-stone-400">Entra este mes</p>
+                <p className="text-lg font-medium text-emerald-700 tabular-nums">{clp(entra)}</p>
               </div>
-            );
-          })}
-        </div>
-      </Card>
+              <div>
+                <p className="text-xs text-stone-400">Hay que pagar</p>
+                <p className="text-lg font-medium text-stone-800 tabular-nums">{clp(aPagar)}</p>
+              </div>
+            </div>
+            <p className="text-sm text-stone-500 mt-3">
+              Queda libre este mes: <b className={netoPlan < 0 ? 'text-red-600' : 'text-stone-900'}>{clp(netoPlan)}</b>
+            </p>
+          </Card>
+
+          <Card className="p-5">
+            <p className="text-xs uppercase tracking-wide text-stone-400 mb-3">Gasto real vs presupuesto</p>
+            <div className="flex items-end justify-between mb-2">
+              <div>
+                <p className="text-2xl font-semibold tabular-nums">{clp(realGastado)}</p>
+                <p className="text-xs text-stone-400">de {clp(aPagar)} presupuestados</p>
+              </div>
+              <p className={`text-right text-sm font-medium ${diferencia < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                {diferencia < 0 ? 'Te pasaste por' : 'Vas ahorrando'}<br />
+                <span className="text-lg tabular-nums">{clp(Math.abs(diferencia))}</span>
+              </p>
+            </div>
+            <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full ${diferencia < 0 ? 'bg-red-500' : 'bg-emerald-600'}`}
+                   style={{ width: `${Math.min(100, aPagar ? (realGastado / aPagar) * 100 : 0)}%` }} />
+            </div>
+            {Object.keys(porPersona).length > 1 && (
+              <div className="flex gap-4 mt-4 pt-4 border-t border-stone-100 text-sm">
+                {Object.entries(porPersona).map(([p, v]) => (
+                  <div key={p}>
+                    <span className={`inline-block w-2 h-2 rounded-full mr-1.5 ${COLOR[p] || 'bg-stone-400'}`}></span>
+                    <span className="text-stone-500">{p}</span> <span className="font-medium">{clp(v)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          <Card className="p-5">
+            <p className="text-xs uppercase tracking-wide text-stone-400 mb-3">Por cuenta</p>
+            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 gap-y-2 text-sm items-center">
+              <span className="text-xs text-stone-400"></span>
+              <span className="text-xs text-stone-400 text-right">Plan</span>
+              <span className="text-xs text-stone-400 text-right">Real</span>
+              <span className="text-xs text-stone-400 text-right">Dif.</span>
+              {comparativo.map(c => (
+                <React.Fragment key={c.cuenta}>
+                  <span className="text-stone-700 truncate">{c.cuenta}</span>
+                  <span className="text-right tabular-nums text-stone-400">{clp(c.plan)}</span>
+                  <span className="text-right tabular-nums">{c.real ? clp(c.real) : '—'}</span>
+                  <span className={`text-right tabular-nums ${c.dif < 0 ? 'text-red-600' : 'text-stone-400'}`}>
+                    {c.real ? clp(c.dif) : '—'}
+                  </span>
+                </React.Fragment>
+              ))}
+            </div>
+          </Card>
+        </>
+      )}
 
       <Card className="p-5">
         <p className="text-xs uppercase tracking-wide text-stone-400 mb-3">Movimientos</p>

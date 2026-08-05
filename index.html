@@ -177,22 +177,24 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .navsem .s{font-size:13.5px;color:var(--muted);font-weight:500}
 .navsem button{width:36px;height:36px;border-radius:12px;background:var(--card2);border:1px solid var(--line);
   font-size:15px;font-weight:700;color:var(--muted)}
-.grid{display:grid;grid-template-columns:56px repeat(7,1fr);gap:4px}
-.gh{text-align:center;padding:2px 0 8px;width:100%;border-radius:9px}
-.gh b{display:block;font-size:14.5px;font-weight:600;letter-spacing:-.02em}
-.gh span{font-size:9.5px;text-transform:uppercase;color:var(--faint);letter-spacing:.05em;font-weight:600}
-.gh.hoy b{width:24px;height:24px;line-height:24px;margin:1px auto 0;border-radius:50%;
-  background:var(--ink);color:var(--bg)}
-.gh.lleno{background:var(--line2)}
-.gh:active{transform:scale(.92)}
-.gt{display:flex;flex-direction:column;justify-content:center;align-items:flex-end;
-  padding-right:7px;height:56px}
-.gt b{font-size:12px;font-weight:650;letter-spacing:-.01em}
-.gt span{font-size:9.5px;color:var(--faint);margin-top:1px}
-.cel{height:56px;border-radius:12px;background:var(--line2);width:100%;transition:background .15s,transform .1s}
-.cel.libre{background:var(--green-bg)}
-.cel.d{background:var(--diego-bg)} .cel.g{background:var(--gabi-bg)} .cel.dg{background:var(--line)}
-.cel:active{transform:scale(.88)}
+/* mes completo */
+.mesgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.dh{text-align:center;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--faint);padding-bottom:4px}
+.dia{display:flex;flex-direction:column;gap:2px;padding:3px;border-radius:10px}
+.dia.hoy{background:var(--line2)}
+.dia.vacio2{visibility:hidden}
+.dnum{font-size:11.5px;font-weight:600;line-height:17px;height:17px;border-radius:6px;
+  color:var(--muted);width:100%;transition:background .15s}
+.dia.hoy .dnum{background:var(--ink);color:var(--bg)}
+.dnum.lleno{color:var(--faint);text-decoration:line-through}
+.dnum:active{transform:scale(.9)}
+.seg{height:11px;border-radius:4px;background:var(--line2);width:100%;
+  transition:background .15s,transform .1s}
+.seg.libre{background:var(--green-bg)}
+.seg.d{background:var(--diego-bg)} .seg.g{background:var(--gabi-bg)} .seg.dg{background:var(--line)}
+.seg:active{transform:scaleY(.7)}
+@media(min-width:420px){ .seg{height:14px} .dnum{font-size:12.5px} }
 .leg{display:flex;flex-wrap:wrap;gap:11px;margin-top:15px;padding-top:14px;border-top:1px solid var(--line2);
   font-size:11.5px;color:var(--muted)}
 .leg i{display:inline-block;width:11px;height:11px;border-radius:4px;margin-right:5px;vertical-align:-1px}
@@ -302,7 +304,8 @@ function capital(s){return s.charAt(0).toUpperCase()+s.slice(1)}
 function diasDelMes(y){var p=y.split('-');return new Date(+p[0],+p[1],0).getDate()}
 
 /* ---------- estado ---------- */
-var S={yo:null,data:null,vista:'plata',mes:null,semana:lunesDe(new Date()),
+var S={yo:null,data:null,vista:'plata',mes:null,
+       mesCal:new Date(new Date().getFullYear(),new Date().getMonth(),1),
        modo:'ocupado',form:false,rutina:false,plan:null,sync:false,busy:false,offline:false};
 
 function guardaLocal(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
@@ -436,12 +439,14 @@ function pintarCalendario(){
     var q=cs[i].dataset.blq.split('|'), f=q[0], b=null;
     for(var j=0;j<BLOQUES.length;j++) if(BLOQUES[j].k===q[1]) b=BLOQUES[j];
     var oD=ocupadoBloque('Diego',f,b), oG=ocupadoBloque('Gabriela',f,b);
-    cs[i].className='cel '+((oD&&oG)?'dg':oD?'d':oG?'g':'libre');
+    cs[i].className='seg '+((oD&&oG)?'dg':oD?'d':oG?'g':'libre');
   }
   var hs=document.querySelectorAll('[data-dia]');
   for(var k=0;k<hs.length;k++){
-    var fd=hs[k].dataset.dia, lleno=BLOQUES.every(function(b){return ocupadoBloque(S.yo,fd,b)});
-    hs[k].classList.toggle('lleno',lleno);
+    (function(el){
+      var fd=el.dataset.dia;
+      el.classList.toggle('lleno',BLOQUES.every(function(b){return ocupadoBloque(S.yo,fd,b)}));
+    })(hs[k]);
   }
 }
 
@@ -529,7 +534,8 @@ function render(){
   $('#app').innerHTML =
     '<div class="wrap">'+
       '<header><h1>Casa &amp; Citas</h1>'+
-      '<span class="av"><i class="'+S.yo+'">'+S.yo.charAt(0)+'</i>'+S.yo+'</span></header>'+
+      '<button class="av" data-salir="1" title="Cerrar sesión">'+
+      '<i class="'+S.yo+'">'+S.yo.charAt(0)+'</i>'+S.yo+'</button></header>'+
       (S.offline?'<p class="sync off">⚠ Sin conexión — estás viendo lo último guardado</p>'
        :S.sync?'<p class="sync">actualizando…</p>':'')+
       (S.vista==='plata'?vistaPlata():vistaCitas())+
@@ -701,9 +707,6 @@ function vistaCitas(){
       }).join('')+'</div>';
   }
 
-  var L=S.semana, dias=[];
-  for(var i=0;i<7;i++){var d=new Date(L);d.setDate(d.getDate()+i);dias.push(d)}
-
   h+='<div class="card p">'+
      '<div class="modos">'+
        '<button data-modo="ocupado" class="'+(S.modo==='ocupado'?'on':'')+'">Cuándo no puedo</button>'+
@@ -711,30 +714,14 @@ function vistaCitas(){
      '</div>'+
      '<p class="expl" style="margin:0 0 15px">'+
        (S.modo==='ocupado'
-         ? 'Toca las horas en que estás ocupada/o. Para un día entero, toca el <b>número del día</b>.'
-         : 'Toca cualquier hora <b>verde</b> — esas son las que están libres para los dos.')+
+         ? 'Cada día tiene tres franjas: <b>AM</b>, <b>Mediodía</b> y <b>PM</b> (de arriba a abajo). '+
+           'Tócalas para marcarte ocupada/o, o toca el <b>número</b> para el día entero.'
+         : 'Toca cualquier franja <b>verde</b> — esas son las que están libres para los dos.')+
      '</p>'+
      '<div class="navsem"><button data-sem="-1">‹</button>'+
-       '<span class="s">'+dias[0].getDate()+' '+MES_L[dias[0].getMonth()].slice(0,3)+' – '+
-         dias[6].getDate()+' '+MES_L[dias[6].getMonth()].slice(0,3)+'</span>'+
+       '<span class="s">'+capital(MES_L[S.mesCal.getMonth()])+' '+S.mesCal.getFullYear()+'</span>'+
        '<button data-sem="1">›</button></div>'+
-     '<div class="grid"><div></div>'+
-       dias.map(function(d){
-         var f=iso(d), lleno=BLOQUES.every(function(b){return ocupadoBloque(S.yo,f,b)});
-         return '<button class="gh'+(f===hoy()?' hoy':'')+(lleno?' lleno':'')+'" data-dia="'+f+'" '+
-                'title="Marcar o liberar el día entero"><span>'+DIAS[d.getDay()]+
-                '</span><b>'+d.getDate()+'</b></button>';
-       }).join('')+
-       BLOQUES.map(function(b){
-         return '<div class="gt"><b>'+b.t+'</b><span>'+b.sub+'</span></div>'+dias.map(function(d){
-           var f=iso(d), oD=ocupadoBloque('Diego',f,b), oG=ocupadoBloque('Gabriela',f,b), c='cel ';
-           c += (oD&&oG)?'dg':oD?'d':oG?'g':'libre';
-           return '<button class="'+c+'" data-blq="'+f+'|'+b.k+'" title="'+
-             (oD||oG ? [oD&&'Diego',oG&&'Gabriela'].filter(Boolean).join(' y ')+' ocupado'
-                     : 'Libre para los dos')+'"></button>';
-         }).join('');
-       }).join('')+
-     '</div>'+
+     mesGrid()+
      '<div class="leg">'+
        '<span><i style="background:var(--green-bg)"></i>Libres los dos</span>'+
        '<span><i style="background:var(--diego-bg)"></i>Diego ocupado</span>'+
@@ -747,6 +734,38 @@ function vistaCitas(){
      '<span style="color:var(--faint);font-size:20px;line-height:1">'+(S.rutina?'−':'+')+'</span></button>'+
      (S.rutina?rutinaHTML():'')+'</div>';
   return h;
+}
+
+/** Mes completo: cada día es una columna de tres franjas (AM, mediodía, PM). */
+function mesGrid(){
+  var y=S.mesCal.getFullYear(), m=S.mesCal.getMonth();
+  var primero=new Date(y,m,1), ultimo=new Date(y,m+1,0);
+  var arranque=new Date(primero); arranque.setDate(1-((primero.getDay()+6)%7));
+  var celdas=Math.ceil(((ultimo-arranque)/86400000+1)/7)*7;
+
+  var h='<div class="mesgrid">'+
+    ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(function(d){
+      return '<div class="dh">'+d+'</div>'}).join('');
+
+  for(var i=0;i<celdas;i++){
+    var d=new Date(arranque); d.setDate(d.getDate()+i);
+    var f=iso(d), fuera=d.getMonth()!==m;
+    if(fuera){ h+='<div class="dia vacio2"></div>'; continue }
+
+    var lleno=BLOQUES.every(function(b){return ocupadoBloque(S.yo,f,b)});
+    h+='<div class="dia'+(f===hoy()?' hoy':'')+'">'+
+       '<button class="dnum'+(lleno?' lleno':'')+'" data-dia="'+f+'">'+d.getDate()+'</button>';
+    for(var j=0;j<BLOQUES.length;j++){
+      var b=BLOQUES[j];
+      var oD=ocupadoBloque('Diego',f,b), oG=ocupadoBloque('Gabriela',f,b);
+      var est=(oD&&oG)?'dg':oD?'d':oG?'g':'libre';
+      h+='<button class="seg '+est+'" data-blq="'+f+'|'+b.k+'" title="'+b.t+' '+b.sub+' — '+
+         (oD||oG ? [oD&&'Diego',oG&&'Gabriela'].filter(Boolean).join(' y ')+' ocupado'
+                 : 'libre para los dos')+'"></button>';
+    }
+    h+='</div>';
+  }
+  return h+'</div>';
 }
 
 function rutinaHTML(){
@@ -812,14 +831,19 @@ function vistaLogin(){
 document.addEventListener('click',function(e){
   var t=e.target.closest('[data-nav],[data-mes],[data-modo],[data-sem],[data-abrir],'+
         '[data-cerrar],[data-borrar],[data-acc],[data-invitar],[data-delrut],[data-ov],'+
-        '[data-dia],[data-blq]');
+        '[data-dia],[data-blq],[data-salir]');
   if(!t) return;
   var d=t.dataset;
 
-  if(d.nav){S.vista=d.nav;render();scrollTo(0,0)}
+  if(d.salir){
+    if(!confirm('¿Cerrar sesión?')) return;
+    try{ localStorage.removeItem('yo'); localStorage.removeItem('datos') }catch(e){}
+    S.yo=null; S.data=null; S.mes=null; vistaLogin(); return;
+  }
+  else if(d.nav){S.vista=d.nav;render();scrollTo(0,0)}
   else if(d.mes){S.mes=d.mes;render()}
   else if(d.modo){S.modo=d.modo;render()}
-  else if(d.sem){S.semana.setDate(S.semana.getDate()+7*Number(d.sem));render()}
+  else if(d.sem){S.mesCal=new Date(S.mesCal.getFullYear(),S.mesCal.getMonth()+Number(d.sem),1);render()}
   else if(d.abrir){S.form=true;render()}
   else if(d.cerrar==='form'){S.form=false;render()}
   else if(d.cerrar==='plan'||d.ov){S.plan=null;render()}

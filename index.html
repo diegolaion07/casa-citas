@@ -122,6 +122,7 @@ header h1{font-size:17px;font-weight:650;letter-spacing:-.025em}
 .cta .mt b{color:var(--ink);font-weight:650}
 .cta .nota{font-size:11.5px;color:var(--faint);margin-top:6px}
 .cta .nota.mal{color:var(--red)}
+.cta.apagada{opacity:.55}
 .bar{height:7px;border-radius:999px;background:var(--line);overflow:hidden}
 .bar i{display:block;height:100%;border-radius:999px;transition:width .6s cubic-bezier(.2,.8,.2,1)}
 .bar i.ok{background:var(--green)} .bar i.mal{background:var(--red)} .bar i.mid{background:var(--amber)}
@@ -380,6 +381,11 @@ function resumenMes(){
           gastos:delMes,curva:c};
 }
 
+/**
+ * Muestra TODAS las cuentas de gasto, aunque el mes tenga 0 presupuestado.
+ * Antes se filtraba por "negativo este mes" y una cuenta ya pagada desaparecía,
+ * dejándote sin dónde anotar el gasto.
+ */
 function porCuenta(){
   var i=idxMes(); if(i<0) return [];
   var real={};
@@ -388,12 +394,18 @@ function porCuenta(){
     var k=String(g.categoria||'').trim().toUpperCase();
     real[k]=(real[k]||0)+(Number(g.monto)||0);
   });
-  return pres().filas.filter(function(f){return (Number(f.valores[i])||0)<0})
+  return pres().filas
+    .filter(function(f){ return f.valores.some(function(v){return v<0}) })
     .map(function(f){
-      var plan=-(Number(f.valores[i])||0);
+      var v=Number(f.valores[i])||0;
+      var plan = v<0 ? -v : 0;
       var r=real[f.cuenta.trim().toUpperCase()]||0;
       return {cuenta:f.cuenta,plan:plan,real:r,dif:plan-r};
-    }).sort(function(a,b){return b.plan-a.plan});
+    })
+    .sort(function(a,b){
+      if(!a.plan!==!b.plan) return a.plan?-1:1;
+      return b.plan-a.plan;
+    });
 }
 
 function cuentasGasto(){
@@ -639,14 +651,24 @@ function comoVamos(R){
 }
 
 function cuentaHTML(c){
-  var pct=c.plan?Math.min(100,c.real/c.plan*100):0, mal=c.dif<0;
-  var estado = mal?'mal':pct>85?'mid':'ok';
-  var nota = !c.real ? 'Sin gastos anotados todavía'
-    : mal ? 'Se pasaron por '+clp(-c.dif)
-    : 'Queda '+clp(c.dif)+' disponible';
-  return '<div class="cta"><span class="ic eq">'+icono(c.cuenta)+'</span><span class="in">'+
+  var sinPres = c.plan===0;
+  var pct = sinPres ? (c.real?100:0) : Math.min(100,c.real/c.plan*100);
+  var mal = !sinPres && c.dif<0;
+  var estado = mal?'mal':sinPres?(c.real?'mid':'ok'):pct>85?'mid':'ok';
+
+  var nota;
+  if(sinPres) nota = c.real ? 'Nada presupuestado este mes — se gastó igual'
+                            : 'Nada presupuestado este mes';
+  else if(!c.real) nota = 'Sin gastos anotados todavía';
+  else if(mal)     nota = 'Se pasaron por '+clp(-c.dif);
+  else             nota = 'Queda '+clp(c.dif)+' disponible';
+
+  var monto = sinPres ? '<b>'+clp(c.real)+'</b>' : '<b>'+clp(c.real)+'</b> / '+clp(c.plan);
+
+  return '<div class="cta'+(sinPres&&!c.real?' apagada':'')+'">'+
+    '<span class="ic eq">'+icono(c.cuenta)+'</span><span class="in">'+
     '<span class="top"><span class="nm">'+esc(c.cuenta)+'</span>'+
-    '<span class="mt num"><b>'+clp(c.real)+'</b> / '+clp(c.plan)+'</span></span>'+
+    '<span class="mt num">'+monto+'</span></span>'+
     '<span class="bar"><i class="'+estado+'" style="width:'+pct+'%"></i></span>'+
     '<span class="nota'+(mal?' mal':'')+'">'+nota+'</span></span></div>';
 }
